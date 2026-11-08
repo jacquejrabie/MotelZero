@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Motel Zero</title>
+<meta name="description" content="Motel Zero is an independent film studio: Hyodo's Paradise, Orchid, Freddie, KUR and more. Created in Los Angeles, California, on Earth.">
+<link rel="canonical" href="https://motelzero.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Motel Zero">
+<meta property="og:title" content="Motel Zero">
+<meta property="og:description" content="Motel Zero is an independent film studio. Created in Los Angeles, California, on Earth.">
+<meta property="og:url" content="https://motelzero.com/">
+<meta property="og:image" content="https://motelzero.com/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://motelzero.com/assets/og.jpg">
+<meta name="theme-color" content="#06050c">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Special+Elite&family=Yellowtail&display=swap" rel="stylesheet">
+<style>
+  :root { --sans:'Helvetica Neue', Helvetica, Arial, sans-serif; --paper:#efe6cf; --ink:#2a2420; --red:#a3262e; --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px); --safe-l:env(safe-area-inset-left,0px); --safe-r:env(safe-area-inset-right,0px); }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:#06050c; overflow:hidden; color:#f1e8d4; font-family:var(--sans); }
+  #c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #fade { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity .38s ease; z-index:20; }
+  #fade.on { opacity:1; }
+
+  /* loader */
+  #loader { position:fixed; inset:0; z-index:40; background:#06050c; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; transition:opacity .7s ease; }
+  #loader.gone { opacity:0; pointer-events:none; }
+  #loader .mark { font:400 54px/1 'Yellowtail', cursive; color:#b9a7ff; text-shadow:0 0 18px rgba(170,120,255,.8), 0 0 42px rgba(255,70,200,.5); letter-spacing:.02em; }
+  #loader .stars { font:400 14px/1 'Courier Prime', monospace; color:#ff5fd8; letter-spacing:.5em; margin-top:-6px; text-shadow:0 0 10px rgba(255,95,216,.8); }
+  #loadtrack { width:min(260px, 60vw); height:2px; background:rgba(241,232,212,.12); overflow:hidden; margin-top:8px; }
+  #loadbar { height:100%; width:100%; background:linear-gradient(90deg,#ff5fd8,#9a7cff,#5fe8ff); transform:scaleX(0); transform-origin:left; transition:transform .5s ease; }
+  #loadlbl { font:500 10px/1 var(--sans); letter-spacing:.24em; text-transform:uppercase; opacity:.5; }
+
+  /* intro */
+  #intro { position:fixed; left:0; right:0; bottom:calc(9vh + var(--safe-b)); display:flex; flex-direction:column; align-items:center; gap:14px; z-index:10; transition:opacity .6s ease, transform .6s ease; }
+  #intro.gone { opacity:0; transform:translateY(20px); pointer-events:none; }
+  #checkin { position:relative; border:0; cursor:pointer; width:184px; height:72px; background:linear-gradient(180deg,#6a35b8,#4b2187); color:#f6ead2;
+    clip-path:polygon(9% 0, 91% 0, 100% 50%, 91% 100%, 9% 100%, 0 50%);
+    font:400 30px/1 'Bebas Neue', Impact, sans-serif; letter-spacing:.08em; padding-left:22px;
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.25); transition:transform .2s ease, filter .2s; }
+  #checkin::before { content:''; position:absolute; left:17px; top:50%; width:13px; height:13px; margin-top:-6.5px; border-radius:50%; background:#06050c; box-shadow:0 0 0 3px #c9a24a; }
+  #checkin small { display:block; font:600 8.5px/1 var(--sans); letter-spacing:.22em; text-transform:uppercase; opacity:.75; margin-top:4px; }
+  #checkin:hover { transform:rotate(-3deg) scale(1.03); filter:brightness(1.12); }
+  #checkin:disabled { filter:grayscale(.6) brightness(.7); cursor:default; }
+  #intro p { margin:0; font:500 10px/1.4 var(--sans); letter-spacing:.22em; text-transform:uppercase; opacity:.5; text-align:center; padding:0 20px; }
+
+  /* top buttons */
+  .hud { position:fixed; z-index:12; width:42px; height:42px; border-radius:50%; border:1px solid rgba(241,232,212,.16); background:rgba(8,6,14,.45);
+    color:#f1e8d4; display:grid; place-items:center; cursor:pointer; padding:0; opacity:0; pointer-events:none; transition:opacity .4s ease, background .2s; backdrop-filter:blur(3px); }
+  .hud.show { opacity:.85; pointer-events:auto; }
+  .hud:hover { background:rgba(30,24,40,.7); opacity:1; }
+  .hud svg { width:19px; height:19px; }
+  #home { top:calc(14px + var(--safe-t)); left:calc(14px + var(--safe-l)); }
+  #mute { top:calc(14px + var(--safe-t)); right:calc(14px + var(--safe-r)); }
+
+  /* floating labels */
+  #labels { position:fixed; inset:0; pointer-events:none; z-index:5; }
+  /* vignette + film grain as overlays: free on the GPU compared with a post-processing pass */
+  #vig { position:fixed; inset:0; pointer-events:none; z-index:4; background:radial-gradient(ellipse 78% 74% at 50% 50%, rgba(0,0,0,0) 58%, rgba(8,3,16,.5) 100%); }
+  #grain { position:fixed; left:-50%; top:-50%; width:200%; height:200%; pointer-events:none; z-index:4; opacity:.07; background-size:180px 180px; animation:grain 1.2s steps(6) infinite; }
+  @keyframes grain { 0%{transform:translate(0,0)} 17%{transform:translate(-7%,4%)} 33%{transform:translate(5%,-6%)} 50%{transform:translate(-3%,7%)} 67%{transform:translate(7%,2%)} 83%{transform:translate(-5%,-3%)} 100%{transform:translate(0,0)} }
+  .lbl { position:absolute; left:0; top:0; transform:translate(-50%,-100%); pointer-events:auto; cursor:pointer; white-space:nowrap;
+    font:700 10px/1 var(--sans); letter-spacing:.2em; text-transform:uppercase; color:rgba(244,234,214,.94);
+    background:rgba(9,7,14,.55); padding:6px 9px 6px 8px; border-radius:2px; backdrop-filter:blur(2px);
+    transition:opacity .5s ease, background .15s ease; display:flex; align-items:center; gap:7px; text-shadow:0 1px 2px rgba(0,0,0,.6); }
+  .lbl i { width:6px; height:6px; border-radius:50%; background:var(--c); box-shadow:0 0 8px var(--c); display:block; }
+  .lbl::after { content:''; position:absolute; left:50%; top:100%; width:1px; height:10px; background:rgba(244,234,214,.35); }
+  .lbl.hang::after { top:auto; bottom:100%; }
+  .lbl:hover, .lbl.hot, .lbl:focus-visible { background:rgba(40,30,52,.85); outline:none; }
+  #labels.off .lbl { opacity:0; pointer-events:none; }
+  .lbl.edge-l::before, .lbl.edge-r::after { font:700 11px/1 var(--sans); opacity:.8; }
+  .lbl.edge-l::before { content:'‹'; margin-right:-2px; }
+  .lbl.edge-r::after { content:'›'; position:static; width:auto; height:auto; background:none; margin-left:-2px; }
+  .lbl.edge-l::after { display:none; }
+
+  /* cards */
+  #card { position:fixed; z-index:11; right:calc(26px + var(--safe-r)); top:50%; width:min(380px, calc(100vw - 40px)); transform:translate(0,-50%);
+    transition:opacity .45s ease, transform .45s ease; max-height:calc(100vh - 120px); overflow:auto; scrollbar-width:none; }
+  #card::-webkit-scrollbar { display:none; }
+  #card.hidden { opacity:0; pointer-events:none; transform:translate(30px,-50%); }
+  .paper { background:var(--paper); color:var(--ink); padding:22px 22px 20px; position:relative; box-shadow:0 18px 40px rgba(0,0,0,.55); }
+  .paper h2 { font:400 34px/0.95 'Bebas Neue', Impact, sans-serif; letter-spacing:.03em; margin:4px 0 6px; }
+  .paper .kind { font:700 10.5px/1.3 var(--sans); text-transform:uppercase; letter-spacing:.16em; opacity:.7; margin-bottom:14px; }
+  .paper p { font:400 15px/1.55 var(--sans); margin:0 0 11px; letter-spacing:.003em; }
+  .paper .note { font:italic 13px/1.4 var(--sans); opacity:.7; }
+  .paper a.btn, .paper button.btn { display:inline-flex; align-items:center; gap:8px; margin-top:6px; font:700 11px/1 var(--sans); letter-spacing:.16em; text-transform:uppercase;
+    color:var(--paper); background:var(--ink); padding:11px 14px; text-decoration:none; border:0; cursor:pointer; }
+  .paper a.btn:hover, .paper button.btn:hover { background:var(--red); }
+  .paper .mail { font:500 13px/1.4 var(--sans); margin-top:10px; word-break:break-all; user-select:all; }
+  .collapse { position:absolute; right:8px; top:8px; width:28px; height:28px; border:0; background:transparent; color:inherit; font:400 20px/1 var(--sans); cursor:pointer; opacity:.55; }
+  .collapse:hover { opacity:1; }
+  .hanger { padding-top:64px; border-radius:6px 6px 2px 2px; background:var(--hc,#efe6cf); color:var(--ht,#2a2420);
+    -webkit-mask:radial-gradient(circle 21px at 50% 30px, transparent 20px, #000 21px); mask:radial-gradient(circle 21px at 50% 30px, transparent 20px, #000 21px); }
+  .hanger .roomno { position:absolute; top:13px; left:18px; font:700 10px/1 var(--sans); letter-spacing:.2em; opacity:.65; }
+  .hanger .status { position:absolute; top:13px; right:44px; font:700 10px/1 var(--sans); letter-spacing:.2em; opacity:.65; text-transform:uppercase; }
+  .ticket { background:#efe0a6; -webkit-mask:radial-gradient(circle 5px at 7px 0, transparent 5px, #000 5.5px) 0 0/14px 100% repeat-x; mask:radial-gradient(circle 5px at 7px 0, transparent 5px, #000 5.5px) 0 0/14px 100% repeat-x; padding-top:30px; }
+  .ticket .perm { display:flex; justify-content:space-between; font:700 10px/1 var(--sans); letter-spacing:.2em; border-bottom:2px solid var(--ink); padding-bottom:8px; margin-bottom:12px; }
+  .ticket .barcode { height:34px; margin-top:16px; background:repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 4px, var(--ink) 4px 5px, transparent 5px 9px, var(--ink) 9px 12px, transparent 12px 14px); opacity:.85; }
+
+  #pills { position:fixed; z-index:12; left:50%; bottom:calc(22px + var(--safe-b)); transform:translateX(-50%); display:flex; gap:10px; opacity:0; pointer-events:none; transition:opacity .3s; }
+  #pills.show { opacity:1; pointer-events:auto; }
+  .pill { font:700 10px/1 var(--sans); letter-spacing:.18em; text-transform:uppercase; background:rgba(9,7,14,.72); color:#f1e8d4; border:1px solid rgba(241,232,212,.22); padding:10px 14px; cursor:pointer; backdrop-filter:blur(3px); white-space:nowrap; transition:background .2s, border-color .2s; }
+  .pill:hover { background:rgba(40,28,60,.85); border-color:rgba(241,232,212,.5); }
+
+  /* roulette */
+  #casino { position:fixed; z-index:11; right:26px; top:50%; transform:translateY(-50%); width:410px; max-width:calc(100vw - 24px); padding:18px 18px 16px; color:#f2ead6;
+    background:linear-gradient(180deg,#0f4a2e,#0b3a24); border:2px solid #c9a24a; box-shadow:0 18px 50px rgba(0,0,0,.55), inset 0 0 0 4px rgba(0,0,0,.18); font-family:var(--sans); transition:opacity .4s ease, transform .4s ease; }
+  #casino.off, #casino.watch { opacity:0; pointer-events:none; transform:translateY(-46%); }
+  .cz-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+  .cz-top b { font:400 30px/1 'Bebas Neue', Impact, sans-serif; letter-spacing:.06em; }
+  .cz-top span { font:700 10px/1 var(--sans); letter-spacing:.18em; text-transform:uppercase; opacity:.85; } .cz-top em { font:400 22px/1 'Bebas Neue'; font-style:normal; letter-spacing:.04em; color:#f6d77a; margin-left:6px; }
+  .cz-chips { display:flex; align-items:center; gap:10px; margin-bottom:12px; } .cz-chips span { font:700 10px var(--sans); letter-spacing:.18em; text-transform:uppercase; opacity:.7; }
+  .cz-chips button { width:44px; height:44px; border-radius:50%; border:4px dashed rgba(255,255,255,.75); color:#fff; font:400 17px/1 'Bebas Neue'; cursor:pointer; box-shadow:0 2px 0 rgba(0,0,0,.4); transition:transform .15s; }
+  .cz-chips button[data-chip="5"] { background:#b81c26; } .cz-chips button[data-chip="25"] { background:#1f7a3e; } .cz-chips button[data-chip="100"] { background:#1a1a1a; }
+  .cz-chips button.on { transform:translateY(-3px); box-shadow:0 0 0 3px #f6d77a, 0 4px 0 rgba(0,0,0,.4); }
+  .cz-grid { display:grid; grid-template-columns:1.3fr repeat(12, 1fr); grid-template-rows:repeat(3, 34px); gap:2px; margin-bottom:6px; }
+  .cz-grid button, .cz-out button { position:relative; border:1px solid rgba(242,234,214,.35); color:#f2ead6; font:400 15px/1 'Bebas Neue', Impact, sans-serif; cursor:pointer; padding:0; background:transparent; }
+  .cz-grid button.r, .cz-out button.r { background:#b81c26; } .cz-grid button.b, .cz-out button.b { background:#141214; } .cz-grid button.g { background:#118a3a; }
+  .cz-grid button:hover, .cz-out button:hover { filter:brightness(1.3); }
+  [data-amt]::after { content:attr(data-amt); position:absolute; top:-7px; right:-6px; z-index:2; min-width:16px; padding:3px 4px; border-radius:10px; background:#f6d77a; color:#1a1408; font:700 9px/1 var(--sans); box-shadow:0 1px 0 rgba(0,0,0,.5); }
+  .cz-out { display:grid; grid-template-columns:repeat(6, 1fr); gap:2px; margin-bottom:12px; } .cz-out button { height:34px; font-size:14px; letter-spacing:.04em; }
+  .cz-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .cz-row span { font:700 10px var(--sans); letter-spacing:.18em; text-transform:uppercase; } .cz-row em { font:400 20px/1 'Bebas Neue'; font-style:normal; color:#f6d77a; margin-left:5px; }
+  #czClear { background:transparent; border:1px solid rgba(242,234,214,.45); color:#f2ead6; font:700 11px/1 var(--sans); letter-spacing:.16em; text-transform:uppercase; padding:12px 14px; cursor:pointer; }
+  #czSpin { background:#f6d77a; border:0; color:#1a1408; font:400 22px/1 'Bebas Neue', Impact, sans-serif; letter-spacing:.14em; padding:12px 26px 10px; cursor:pointer; box-shadow:0 3px 0 #8a6a1a; }
+  #czSpin:disabled { opacity:.45; cursor:default; }
+  #czMsg { min-height:34px; margin-top:12px; font:500 13px/1.4 var(--sans); } #czMsg b { font:400 18px/1 'Bebas Neue'; letter-spacing:.06em; padding:2px 6px; } #czMsg b.r { background:#b81c26; } #czMsg b.b { background:#141214; } #czMsg b.g { background:#118a3a; }
+  #czHist { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; } #czHist i { font:400 13px/20px 'Bebas Neue'; font-style:normal; min-width:22px; height:20px; text-align:center; border-radius:10px; } #czHist i.r { background:#b81c26; } #czHist i.b { background:#141214; } #czHist i.g { background:#118a3a; }
+  #casino.spinning .cz-grid, #casino.spinning .cz-out { opacity:.6; }
+  #toast { position:fixed; z-index:13; left:50%; top:calc(70px + var(--safe-t)); transform:translateX(-50%); font:500 14px/1.35 var(--sans); color:#f1e8d4;
+    background:rgba(9,7,14,.8); padding:10px 14px; border:1px solid rgba(241,232,212,.2); opacity:0; transition:opacity .3s; pointer-events:none; text-align:center; max-width:86vw; }
+  #toast.show { opacity:1; }
+
+  /* hallway key fobs */
+  #keys { position:fixed; z-index:12; left:50%; bottom:calc(22px + var(--safe-b)); transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:9px; transition:opacity .4s ease, transform .4s ease; }
+  #keys .row { display:flex; justify-content:center; gap:10px; }
+  #keys.off { opacity:0; pointer-events:none; transform:translate(-50%, 18px); }
+  .fob { position:relative; flex:0 0 auto; border:0; cursor:pointer; height:48px; min-width:122px; padding:0 18px 0 31px; background:var(--c); color:var(--t, #17121a);
+    clip-path:polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%); display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:2px;
+    transition:transform .2s ease, filter .2s ease; filter:saturate(.8) brightness(.92); }
+  .fob::before { content:''; position:absolute; left:12px; top:50%; width:9px; height:9px; margin-top:-4.5px; border-radius:50%; background:#0b0910; box-shadow:0 0 0 2px #c9a24a; }
+  .fob b { font:400 22px/0.92 'Bebas Neue', Impact, sans-serif; letter-spacing:.04em; white-space:nowrap; }
+  .fob span { font:700 8px/1.1 var(--sans); letter-spacing:.16em; text-transform:uppercase; white-space:nowrap; opacity:.72; }
+  .fob:hover, .fob:focus-visible { transform:translateY(-3px) rotate(-2deg); filter:none; outline:none; }
+  .fob.sm { height:38px; min-width:104px; padding:0 15px 0 26px; } .fob.sm::before { left:10px; width:7px; height:7px; margin-top:-3.5px; } .fob.sm b { font-size:17px; } .fob.sm span { font-size:7px; }
+  #casino.left { right:auto; left:26px; }
+
+  /* debug (preview only) */
+  #dbgbtn { position:fixed; left:8px; bottom:calc(8px + var(--safe-b)); z-index:30; font:10px/1 monospace; background:rgba(0,0,0,.5); color:#9f9; border:1px solid #3a3; padding:4px 6px; cursor:pointer; opacity:.6; }
+  #dbg { position:fixed; left:8px; bottom:calc(34px + var(--safe-b)); z-index:30; font:11px/1.4 monospace; background:rgba(0,0,0,.8); color:#9f9; border:1px solid #3a3; padding:8px; display:none; max-width:260px; }
+  #dbg.on { display:block; }
+  #dbg button { font:10px monospace; margin:2px; background:#132; color:#9f9; border:1px solid #3a3; cursor:pointer; }
+
+  @media (max-width: 720px), (max-aspect-ratio: 4/5) {
+    #card { left:12px; right:12px; width:auto; top:auto; bottom:calc(12px + var(--safe-b)); transform:none; max-height:46vh; }
+    #card.hidden { transform:translateY(30px); }
+    #card.min { max-height:56px; overflow:hidden; }
+    .paper { padding:18px 18px 16px; }
+    .paper h2 { font-size:28px; }
+    .paper p { font-size:14px; }
+    .hanger { padding-top:50px; background:var(--hc,#efe6cf); background:color-mix(in srgb, var(--hc,#efe6cf) 84%, transparent); }
+    .hanger .roomno { font-size:9px; letter-spacing:.14em; } .hanger .status { font-size:9px; letter-spacing:.12em; }
+    .hanger h2 { font-size:24px; } .hanger .kind { font-size:9.5px; margin-bottom:9px; } .hanger p { font-size:12.5px; line-height:1.45; margin-bottom:8px; }
+    .hanger a.btn { font-size:10px; padding:9px 11px; margin-top:3px; } .hanger.paper { padding:50px 16px 13px; }
+    #pills { bottom:calc(14px + var(--safe-b)); max-width:calc(100vw - 24px); flex-wrap:wrap; justify-content:center; gap:8px; }
+    .pill { font-size:12px; padding:15px 17px; letter-spacing:.14em; }
+    body.pills-on #card { bottom:calc(74px + var(--safe-b)); max-height:42vh; }
+    .hud { width:48px; height:48px; } .hud svg { width:22px; height:22px; }
+    .lbl { font-size:13.5px; padding:10px 13px; gap:8px; letter-spacing:.14em; } .lbl i { width:8px; height:8px; }
+    #casino { left:8px; right:8px; width:auto; top:auto; bottom:calc(8px + var(--safe-b)); transform:none; max-height:56vh; overflow-y:auto; padding:12px 12px 10px; }
+    #casino.off, #casino.watch { transform:translateY(20px); }
+    .cz-top { margin-bottom:8px; } .cz-top b { font-size:24px; }
+    .cz-chips { margin-bottom:8px; } .cz-chips button { width:38px; height:38px; font-size:15px; }
+    .cz-grid { grid-template-rows:repeat(3, 30px); gap:1px; } .cz-grid button { font-size:13px; } .cz-out button { height:30px; font-size:12px; }
+    .cz-out { margin-bottom:8px; } #czMsg { margin-top:8px; font-size:12px; min-height:28px; }
+    #keys { left:10px; right:10px; transform:none; gap:6px; bottom:calc(12px + var(--safe-b)); } #keys .row { width:100%; gap:6px; }
+    #keys.off { transform:translateY(18px); }
+    .fob { height:50px; min-width:0; width:calc((100% - 12px) / 3); padding:0 9px 0 23px; } .fob.sm { height:36px; min-width:0; padding:0 8px 0 21px; } .fob.sm b { font-size:12.5px; white-space:nowrap; } .fob.sm span { font-size:6.5px; } .fob.sm::before { left:8px; width:6px; height:6px; margin-top:-3px; }
+    .fob::before { left:9px; width:7px; height:7px; margin-top:-3.5px; }
+    .fob b { font-size:15px; line-height:.95; white-space:normal; }
+    .fob span { font-size:7.5px; letter-spacing:.1em; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+    .lbl i { width:5px; height:5px; }
+  }
+  @media (min-width: 721px) and (min-aspect-ratio: 4/5) {
+    .collapse { display:none; } .hanger .status { right:18px; }
+    .hud { width:54px; height:54px; } .hud svg { width:24px; height:24px; }
+    #home { top:calc(20px + var(--safe-t)); left:calc(20px + var(--safe-l)); } #mute { top:calc(20px + var(--safe-t)); right:calc(20px + var(--safe-r)); }
+    .lbl { font-size:15px; padding:12px 19px 12px 16px; gap:11px; letter-spacing:.2em; } .lbl i { width:9px; height:9px; } .lbl::after { height:16px; }
+    #pills { bottom:calc(28px + var(--safe-b)); gap:12px; } .pill { font-size:12.5px; padding:15px 22px; }
+    .paper a.btn, .paper button.btn { font-size:13px; padding:15px 20px; }
+    #checkin { width:228px; height:90px; font-size:38px; padding-left:30px; } #checkin::before { left:22px; width:16px; height:16px; margin-top:-8px; } #checkin small { font-size:10px; margin-top:5px; }
+    #keys { gap:12px; bottom:calc(28px + var(--safe-b)); }
+    .fob { height:64px; min-width:190px; padding:0 26px 0 40px; } .fob::before { left:16px; width:11px; height:11px; margin-top:-5.5px; } .fob b { font-size:28px; } .fob span { font-size:9.5px; }
+    .fob.sm { height:44px; min-width:150px; padding:0 20px 0 32px; } .fob.sm::before { left:13px; width:8px; height:8px; margin-top:-4px; } .fob.sm b { font-size:20px; } .fob.sm span { font-size:8px; }
+    #toast { font-size:16px; padding:13px 20px; }
+  }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }</script>
+</head>
+<body>
+<canvas id="c" aria-label="Motel Zero, a motel on an asteroid"></canvas>
+<div id="vig"></div><div id="grain"></div>
+<div id="labels" class="off"></div>
+
+<div id="loader"><div class="mark">Motel Zero</div><div class="stars">★ ★ ★ ★</div><div id="loadtrack"><div id="loadbar"></div></div><div id="loadlbl">loading</div></div>
+
+<div id="intro">
+  <button id="checkin" disabled>Check in<small>loading…</small></button>
+  <p>Created in Los Angeles, California, on Earth.</p>
+</div>
+
+<button id="home" class="hud" aria-label="Back outside" title="Back outside">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg>
+</button>
+<button id="mute" class="hud" aria-label="Sound on/off" title="Sound">
+  <svg id="snd-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+  <svg id="snd-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="m16 9.5 5 5m0-5-5 5"/></svg>
+</button>
+
+<div id="card" class="hidden" role="region" aria-label="Details" aria-live="polite"></div>
+<div id="pills"></div>
+<div id="casino" class="off" aria-label="Roulette">
+  <div class="cz-top"><b>Roulette</b><span>Credits<em id="czCredits">500</em></span></div>
+  <div class="cz-chips"><span>Chip</span><button data-chip="5">5</button><button data-chip="25">25</button><button data-chip="100">100</button></div>
+  <div id="czGrid" class="cz-grid"></div>
+  <div class="cz-out"><button data-bet="low">1–18</button><button data-bet="even">Even</button><button data-bet="red" class="r">Red</button><button data-bet="black" class="b">Black</button><button data-bet="odd">Odd</button><button data-bet="high">19–36</button></div>
+  <div class="cz-row"><button id="czClear">Clear</button><span>Bet<em id="czBet">0</em></span><button id="czSpin">Spin</button></div>
+  <div id="czMsg"></div><div id="czHist"></div>
+</div>
+<div id="keys" class="off" aria-label="Pick a room"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="fade"></div>
+
+<video id="tvvid" src="assets/tv.mp4" muted loop playsinline preload="none" style="display:none"></video>
+
+<!--DEBUG-->
+<button id="dbgbtn">debug</button>
+<div id="dbg"><div id="fps">–</div><div id="dbgjump"></div></div>
+<!--/DEBUG-->
+
+<noscript><div style="position:fixed;inset:0;display:grid;place-items:center;text-align:center;font:16px/1.6 Helvetica,Arial,sans-serif;color:#f1e8d4;background:#06050c;padding:24px">Motel Zero is an independent film studio.<br>This site needs JavaScript. Say hi: <a style="color:#e9b54d" href="mailto:bookmotelzero@gmail.com">bookmotelzero@gmail.com</a></div></noscript>
+<script type="module" src="main.js"></script>
+</body>
+</html>
