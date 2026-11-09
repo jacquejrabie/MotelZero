@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Motel Zero</title>
 <meta name="description" content="Motel Zero is an independent film studio: Hyodo's Paradise, Orchid, Freddie, KUR and more. Created in Los Angeles, California, on Earth.">
 <link rel="canonical" href="https://motelzero.com/">
@@ -26,7 +26,7 @@
 <style>
   :root { --sans:'Helvetica Neue', Helvetica, Arial, sans-serif; --paper:#efe6cf; --ink:#2a2420; --red:#a3262e; --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px); --safe-l:env(safe-area-inset-left,0px); --safe-r:env(safe-area-inset-right,0px); }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body { margin:0; height:100%; background:#06050c; overflow:hidden; color:#f1e8d4; font-family:var(--sans); }
+  html,body { margin:0; height:100%; background:#06050c; overflow:hidden; color:#f1e8d4; font-family:var(--sans); touch-action:manipulation; } /* manipulation: no double-tap zoom when tapping fast */
   #c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
   #fade { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity .38s ease; z-index:20; }
   #fade.on { opacity:1; }
@@ -179,6 +179,7 @@
     .pill { font-size:12px; padding:15px 17px; letter-spacing:.14em; }
     body.pills-on #card { bottom:calc(74px + var(--safe-b)); max-height:42vh; }
     .hud { width:48px; height:48px; } .hud svg { width:22px; height:22px; }
+    #home, #mute { top:calc(20px + var(--safe-t)); }
     .lbl { font-size:13.5px; padding:10px 13px; gap:8px; letter-spacing:.14em; } .lbl i { width:8px; height:8px; }
     #casino { left:8px; right:8px; width:auto; top:auto; bottom:calc(8px + var(--safe-b)); transform:none; max-height:56vh; overflow-y:auto; padding:12px 12px 10px; }
     #casino.off, #casino.watch { transform:translateY(20px); }

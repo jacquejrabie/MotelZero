@@ -318,14 +318,15 @@ export function buildMotel(world, ctx) {
   const ladder = new THREE.Group(); ladder.position.set(PRX - 0.18, DECK, 0.35); ladder.rotation.y = -Math.PI / 2; PD.add(ladder); [-0.22, 0.22].forEach((x) => { const rl = torus(0.2, 0.02, chromeM(), x, 0.0, 0.05, ladder, 16, Math.PI); rl.rotation.y = Math.PI / 2; cyl(0.02, 0.02, 0.9, chromeM(), x, -0.45, -0.15, ladder, 8); }); [0.25, 0.55].forEach((d) => rbox(0.46, 0.03, 0.12, 0.01, chromeM(), 0, -d, -0.12, ladder, 1));
   const poolL = new THREE.PointLight(0x40e0ff, 9, 14, 1.4); poolL.position.set(0, 3.6, 0); PD.add(poolL);
   // someone on a floatie
-  const SW = floatie(); SW.g.position.set(0, WL, 0); PD.add(SW.g);
+  const SW = floatie(); SW.g.position.set(0, WL, 0); PD.add(SW.g); let tNow = 0, pk0 = -99, pkA = 0;
   const ripT = softTex(128, (r) => Math.exp(-Math.pow((r - 0.82) / 0.07, 2))); const rips = [0, 0.5].map((ph) => { const q = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), basic({ map: ripT, color: 0xe8ffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); q.position.y = WL + 0.006; q.userData.noCast = true; PD.add(q); return { q, ph }; });
   up.push((t) => {
     water.material.emissiveIntensity = 0.32 + Math.sin(t * 1.7) * 0.04; poolL.intensity = 9 + Math.sin(t * 2.3) * 1;
     water.material.normalMap.offset.set(t * 0.012, t * 0.007); causL[0].offset.set(t * 0.021, t * 0.013); causL[1].offset.set(-t * 0.017, t * 0.019);
-    const a = t * 0.045; SW.g.position.set(Math.cos(a) * PRX * 0.36, WL + Math.sin(t * 1.25) * 0.012, Math.sin(a * 1.3) * PRZ * 0.3);
-    SW.g.rotation.set(Math.sin(t * 0.9) * 0.025, 0.6 + Math.sin(t * 0.06) * 0.9 + a * 0.4, Math.sin(t * 1.1 + 1) * 0.03);
-    rips.forEach((r) => { const k = (t * 0.22 + r.ph) % 1; r.q.position.x = SW.g.position.x; r.q.position.z = SW.g.position.z; r.q.scale.setScalar(1.4 + k * 2.2); r.q.material.opacity = (1 - k) * 0.22; });
+    tNow = t; const a = t * 0.045, p = t - pk0, e = p < 6 ? Math.exp(-p * 1.9) : 0, dip = p < 6 ? -0.085 * Math.sin(p * 7) * e : 0, push = p < 12 ? 0.3 * (1 - Math.exp(-p * 2.6)) * Math.exp(-p * 0.3) : 0;
+    SW.g.position.set(Math.cos(a) * PRX * 0.36 + Math.cos(pkA) * push, WL + Math.sin(t * 1.25) * 0.012 + dip, Math.sin(a * 1.3) * PRZ * 0.3 + Math.sin(pkA) * push);
+    SW.g.rotation.set(Math.sin(t * 0.9) * 0.025 + 0.075 * Math.sin(p * 5.6) * e, 0.6 + Math.sin(t * 0.06) * 0.9 + a * 0.4 + 0.22 * push, Math.sin(t * 1.1 + 1) * 0.03 + 0.06 * Math.sin(p * 6.3 + 1.1) * e);
+    rips.forEach((r) => { const k = (t * 0.22 + r.ph) % 1; r.q.position.x = SW.g.position.x; r.q.position.z = SW.g.position.z; r.q.scale.setScalar(1.4 + k * 2.2); r.q.material.opacity = (1 - k) * 0.22 * (1 + 2.5 * e); });
   });
   if (!VPOOL) [[-3.0, 3.25, 0.5], [0.2, 4.35, 0], [3.1, 3.15, -0.5]].forEach(([x, z, ry]) => { const lg2 = new THREE.Group(); lg2.position.set(x, 1.33, z); lg2.rotation.y = ry; PD.add(lg2); rbox(0.7, 0.08, 1.8, 0.03, std({ color: VPOOL ? 0x34508a : 0xf0e2b0, roughness: 0.8 }), 0, 0, 0, lg2); const bk = rbox(0.7, 0.08, 0.7, 0.03, std({ color: 0xf0e2b0, roughness: 0.8 }), 0, 0.28, -0.85, lg2); bk.rotation.x = 0.7; [[-0.3, 0.8], [0.3, 0.8], [-0.3, -0.7], [0.3, -0.7]].forEach(([a2, b2]) => cyl(0.02, 0.02, 0.26, steel, a2, -0.13, b2, lg2, 6)); });
   // a towel and flip-flops by the far lounger
@@ -346,7 +347,7 @@ export function buildMotel(world, ctx) {
     const nq = quad(0.62, 0.31, std({ map: toTex(nc2), roughness: 0.35 }), 0, 1.1, 0.014, ns); nq.userData.go = 'pool'; hot.push(nq); }
   [dome, deck, water, plinth].forEach((o) => { o.userData.go = 'pool'; hot.push(o); });
   SW.g.traverse((o) => { if (o.isMesh) { o.userData.go = 'pool'; o.userData.poolToast = true; hot.push(o); } });
-  const pool = { center: new THREE.Vector3(22, WL, -14), swimmer: SW.g };
+  const pool = { center: new THREE.Vector3(22, WL, -14), swimmer: SW.g, poke() { if (tNow - pk0 < 0.5) return; pk0 = tNow; pkA = R(0, Math.PI * 2); } };
 
   const casino = casinoTower(m, hot, up, M);
 

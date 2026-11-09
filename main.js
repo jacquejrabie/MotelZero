@@ -234,6 +234,7 @@ function extView(name) {
 function boardView() { const v = interiors.lobby.views.board; return portrait() ? { pos: v.p.pos.clone(), target: v.p.target.clone(), fov: vfovFor(40, 64) } : { pos: v.pos.clone(), target: v.target.clone(), fov: vfovFor(60, 54) }; }
 function wheelView() { const v = interiors.casino.views.wheel; return portrait() ? { pos: v.p.pos.clone(), target: v.p.target.clone(), fov: 60 } : { pos: v.pos.clone(), target: v.target.clone(), fov: 46 }; }
 function parkView() { const v = interiors.parking.views.park; return portrait() ? { pos: v.p.pos.clone(), target: v.p.target.clone(), fov: vfovFor(46, 68) } : { pos: v.pos.clone(), target: v.target.clone(), fov: vfovFor(70, 52) }; }
+function casinoWide() { return { pos: new THREE.Vector3(6.2, 3.5, 5.7), target: new THREE.Vector3(-1.9, 0.3, -2.4), fov: 86 }; }
 function casinoView() { const v = interiors.casino.views.table; return portrait() ? { pos: v.p.pos.clone(), target: v.p.target.clone(), fov: vfovFor(44, 66) } : { pos: v.pos.clone(), target: v.target.clone(), fov: vfovFor(62, 50) }; }
 function hallView() { const v = interiors.hall.views.hall; return portrait() ? { pos: v.p.pos.clone(), target: v.p.target.clone(), fov: vfovFor(40, 64) } : { pos: v.pos.clone(), target: v.target.clone(), fov: vfovFor(64, 52) }; }
 function setCam(v) { cam.pos.copy(v.pos); cam.target.copy(v.target); cam.fov = v.fov; }
@@ -372,8 +373,10 @@ async function go(to) {
   if (to === 'casino') {
     if (state === 'landing' || state === 'pool') await flyTo(extView('exterior'), 0.9);
     panTarget = 0; const c = motel.casino; await zoomInFade({ pos: c.door.clone().addScaledVector(c.front, 1.4).add(new THREE.Vector3(0, 0.5, 0)), target: c.door.clone().add(new THREE.Vector3(0, 0.3, 0)), fov: 50 }, 2.0, 0.55);
-    useScene(interiors.casino.scene, 0.5); setCam(casinoView()); state = 'casino'; Snd.mix('casino'); hud(); setHash('casino');
-    await fade(false); showCasino(true); busy = false; return;
+    const wide = portrait(); useScene(interiors.casino.scene, 0.5); setCam(wide ? casinoWide() : casinoView()); state = 'casino'; Snd.mix('casino'); hud(); setHash('casino');
+    // phones: a beat on the whole room first, so you see the space, then in to the table
+    await fade(false); if (wide) { await sleep(800); await flyTo(casinoView(), 2.0); }
+    showCasino(true); busy = false; return;
   }
   if (PROJECTS[to]) {
     panTarget = 0; const d = doors[to]; d.voidM.visible = true;
@@ -503,7 +506,7 @@ canvasEl.addEventListener('pointerup', (e) => {
   if (o.userData.lobby) { interiors.lobby?.fx?.[o.userData.lobby]?.(); return; }
   if (o.userData.toast) { const tx = o.userData.toast; toast(Array.isArray(tx) ? pick(tx) : tx); return; }
   if (o.userData.fx) { if (state === o.userData.go) { SPOT_FX[o.userData.fx](); return; } pendingFx = o.userData.fx; }
-  if (state === 'pool' && o.userData.poolToast) { const f = motel.pool.swimmer; const r0 = f.rotation.y; tween(1.6, (k) => (f.rotation.y = r0 + k * Math.PI * 0.5)); return; }
+  if (state === 'pool' && o.userData.poolToast) { motel.pool.poke(); Snd.plop?.(); return; }
   if (o.userData.go) go(o.userData.go);
 });
 canvasEl.addEventListener('pointercancel', () => (down = null));
