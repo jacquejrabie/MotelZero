@@ -706,7 +706,7 @@ export function buildCasino(ctx) {
   if (!VIDEO) roomBase(s, { ...ctx, w, d, h, wall: wallpaperTex(1800, 430, { bg: '#4a0e16', fg: '#c9a24a', kind: 'damask', scale: 64, wainscot: { col: '#2a1408', frac: 0.3 }, dirt: 0.5 }), floor: carpetTex(['#3a0812', '#c9a24a', '#1a0408'], 'diamond', [6, 4]), ceil: ceilingTex([4, 3], false), hemi: 0xffd8b0, hemiI: 0.22, trim: brass });
   else roomBase(s, { ...ctx, w, d, h, wall: paddedTex(), floor: woodTex(512, 512, '#2e1c12', 12, [6, 4], 0.35), ceil: { map: (() => { const [c, g] = cnv(64, 64); g.fillStyle = '#2a2230'; g.fillRect(0, 0, 64, 64); return toTex(c); })() }, hemi: 0xd8c8ff, hemiI: 0.3, trim: std({ color: 0x9a9aa6, roughness: 0.25, metalness: 0.8 }) });
   if (VIDEO) videoCasino(s, w, d, h, up);
-  s.background = new THREE.Color(0x070305);
+  s.background = new THREE.Color(0x070305); s.fog = new THREE.FogExp2(VIDEO ? 0x3a2f4a : 0x3a2c22, VIDEO ? 0.045 : 0.04); // a little haze, so the far wall sits back in the smoke
   // ---- the table ----
   const T = new THREE.Group(); s.add(T);
   const wood = texMat(woodTex(512, 256, '#4a2614', 10), { roughness: 0.45 });
@@ -817,8 +817,7 @@ export function buildCasino(ctx) {
     const [kc, kg] = cnv(512, 120); kg.fillStyle = '#1a1210'; kg.fillRect(0, 0, 512, 120); kg.fillStyle = '#e8c860'; kg.font = '84px "Bebas Neue"'; kg.textAlign = 'center'; kg.textBaseline = 'middle'; kg.fillText('CASHIER', 256, 64); quad(1.7, 0.4, basic({ map: toTex(kc) }), 0, 2.75, 0.2, cg2); }
   if (!VIDEO) { palm(s, -w / 2 + 0.6, 0, d / 2 - 0.8); palm(s, w / 2 - 0.6, 0, d / 2 - 0.8); palm(s, -w / 2 + 0.6, 0, -1.0); }
   { const n = 70, im = new THREE.InstancedMesh(new THREE.CircleGeometry(0.06, 12).rotateX(Math.PI / 2), basic({ color: 0xfff0c8 }), n), mt = new THREE.Matrix4(); for (let k = 0; k < n; k++) { mt.makeTranslation(R(-w / 2 + 0.5, w / 2 - 0.5), h - 0.01, R(-d / 2 + 0.5, d / 2 - 0.5)); im.setMatrixAt(k, mt); } s.add(im); }
-  const smoke = []; for (let k = 0; k < 12; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0x8c8496, transparent: true, opacity: R(0.04, 0.08), depthWrite: false })); sp.scale.setScalar(R(3, 5.5)); sp.position.set(R(-6, 6), R(2.3, 3.3), R(-5, 4)); sp.userData.v = R(0.05, 0.15) * (rnd() < 0.5 ? -1 : 1); s.add(sp); smoke.push(sp); }
-  up.push((dt) => smoke.forEach((sp) => { sp.position.x += sp.userData.v * dt; if (Math.abs(sp.position.x) > 7) sp.userData.v *= -1; sp.material.rotation += dt * 0.02; }));
+  casinoSmoke(s, up, w, d);
   const velvet = std({ color: 0x8a0f1a, roughness: 0.8 });
   [[2.6, 1.6], [2.6, -1.6]].forEach(([x, z]) => { cyl(0.03, 0.05, 0.9, brass, x, 0.45, z, s, 12); sph(0.05, brass, x, 0.92, z, s, 12); cyl(0.12, 0.14, 0.04, brass, x, 0.02, z, s, 16); });
   { const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(2.6, 0.85, 1.6), new THREE.Vector3(2.6, 0.55, 0), new THREE.Vector3(2.6, 0.85, -1.6)]); const rope = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.025, 8), velvet); rope.castShadow = true; s.add(rope); }
@@ -827,6 +826,87 @@ export function buildCasino(ctx) {
 }
 
 /* ---- casino pieces ---- */
+// cocktails: a few glass shapes, a glowing pour in each. Each drink owns its materials so a swapped-out one can be thrown away cleanly
+const DRINKS = [['martini', 0xff7ad8], ['highball', 0x7af4ff], ['coupe', 0xffb347], ['rocks', 0xffa040], ['martini', 0x9dff6a], ['highball', 0xd07aff], ['coupe', 0xff5f7a]];
+function mkDrink(kind, col) {
+  const g = new THREE.Group(), glass = phys({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.42, clearcoat: 1 }), pour = basic({ color: col });
+  if (kind === 'martini') { lathe([[0, 0], [0.03, 0], [0.006, 0.01], [0.006, 0.08], [0.05, 0.14], [0, 0.135]], glass, 0, 0, 0, g, 16); cyl(0.04, 0.004, 0.04, pour, 0, 0.115, 0, g, 12); sph(0.009, basic({ color: 0x8aa83a }), 0.012, 0.112, 0, g, 8); }
+  else if (kind === 'highball') { lathe([[0, 0], [0.028, 0], [0.03, 0.15], [0.026, 0.15], [0.024, 0.006], [0, 0.006]], glass, 0, 0, 0, g, 16); cyl(0.024, 0.023, 0.11, pour, 0, 0.062, 0, g, 12); cyl(0.003, 0.003, 0.2, basic({ color: 0xffffff }), 0.012, 0.12, 0, g, 6).rotation.z = 0.18; }
+  else if (kind === 'coupe') { lathe([[0, 0], [0.032, 0], [0.006, 0.01], [0.006, 0.07], [0.05, 0.1], [0.055, 0.12], [0, 0.1]], glass, 0, 0, 0, g, 16); cyl(0.05, 0.03, 0.022, pour, 0, 0.104, 0, g, 14); sph(0.01, basic({ color: 0xd0142a }), 0.02, 0.122, 0, g, 8); }
+  else { lathe([[0, 0], [0.036, 0], [0.038, 0.085], [0.034, 0.085], [0.032, 0.008], [0, 0.008]], glass, 0, 0, 0, g, 16); cyl(0.032, 0.031, 0.05, pour, 0, 0.034, 0, g, 12); box(0.03, 0.03, 0.03, phys({ color: 0xffffff, transparent: true, opacity: 0.55, roughness: 0.1 }), 0.006, 0.06, 0.004, g).rotation.set(0.3, 0.5, 0.2); }
+  g.traverse((o) => { o.userData.noBatch = true; }); return g;
+}
+const BOTTLES = [0x2a6a2a, 0x8a4a10, 0xd8d0c0, 0x5a1020, 0x1a3a6a, 0x6a2a7a];
+function mkBottle(col) { const g = new THREE.Group(); lathe([[0, 0], [0.035, 0], [0.035, 0.16], [0.012, 0.22], [0.012, 0.26], [0, 0.26]], phys({ color: col, roughness: 0.1, transparent: true, opacity: 0.85, clearcoat: 1 }), 0, 0, 0, g, 12);
+  cyl(0.0365, 0.0365, 0.05, std({ color: 0xefe6d0, roughness: 0.6 }), 0, 0.09, 0, g, 12); cyl(0.013, 0.013, 0.018, std({ color: 0x1a1a1c, roughness: 0.4 }), 0, 0.268, 0, g, 8); g.traverse((o) => { o.userData.noBatch = true; }); return g; }
+/* the waiter: the diner robot's big cousin on a chrome neck. Every half minute or so it does a round of its stops: at each one it takes the thing there in through the lid in its head and pops a different one out in its place */
+function waiterBot(s, up, stops, home, homePath) {
+  const shell = phys({ color: 0xe9dfc6, roughness: 0.45, clearcoat: 0.4 }), trimR = phys({ color: 0xb81c2a, roughness: 0.4, clearcoat: 0.5 }), chromeS = phys({ color: 0xd8d8dc, metalness: 1, roughness: 0.22 });
+  const rb = new THREE.Group(); rb.position.set(home[0], 0, home[1]); s.add(rb); const body = new THREE.Group(); rb.add(body);
+  cyl(0.24, 0.27, 0.13, shell, 0, 0.085, 0, rb, 32); cyl(0.275, 0.275, 0.03, trimR, 0, 0.03, 0, rb, 32); torus(0.242, 0.008, chromeS, 0, 0.152, 0, rb, 48).rotation.x = Math.PI / 2;
+  const under = spill(0x7af4ff, 1.0, 1.0, 0.22); under.position.y = 0.006; rb.add(under);
+  cyl(0.034, 0.042, 0.5, chromeS, 0, 0.4, 0, body, 12);
+  rbox(0.52, 0.36, 0.28, 0.045, shell, 0, 0.82, 0, body, 3); box(0.53, 0.05, 0.285, trimR, 0, 0.672, 0, body); box(0.29, 0.123, 0.012, std({ color: 0x14161a, roughness: 0.3 }), 0, 0.865, 0.141, body);
+  const eyeM = basic({ color: 0x7fe8ff }), eyes = [-0.065, 0.065].map((ex) => { const e = cyl(0.02, 0.02, 0.006, eyeM, ex, 0.872, 0.149, body, 14); e.rotation.x = Math.PI / 2; return e; });
+  cyl(0.006, 0.006, 0.13, chromeS, 0.19, 1.065, -0.07, body, 6); const bulbM = basic({ color: 0xff3a3a }); sph(0.017, bulbM, 0.19, 1.135, -0.07, body, 10);
+  const lid = new THREE.Group(); lid.position.set(0, 1.0, -0.12); body.add(lid); box(0.44, 0.016, 0.24, chromeS, 0, 0.008, 0.12, lid);
+  rb.traverse((o) => { o.userData.noBatch = true; }); rb.name = 'waiter';
+  const V3 = THREE.Vector3, sm = (k) => k * k * (3 - 2 * k), wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  let h = 0, moving = 0, steps = [], si = 0, st = 0, wait = R(4, 7), t = 0, t0 = 0, blink = 3;
+  const path = (pts) => new THREE.CatmullRomCurve3([new V3(rb.position.x, 0, rb.position.z), ...pts.map(([x, z]) => new V3(x, 0, z))], false, 'centripetal');
+  const turn = (to) => { let h0 = 0, dh = 0; return { init(S) { h0 = h; dh = wrap((typeof to === 'function' ? to() : to) - h); S.dur = Math.abs(dh) / 2.4 + 0.15; }, fn(k) { h = h0 + dh * sm(k); } }; };
+  const drive = (pts) => { let c = null; return { init(S) { c = path(pts); S.dur = c.getLength() / 0.48 + 0.5; }, fn(k, d) { const u = sm(k), p = c.getPointAt(u), tg = c.getTangentAt(Math.min(0.999, Math.max(0.001, u))); rb.position.set(p.x, 0, p.z); h += wrap(Math.atan2(tg.x, tg.z) - h) * Math.min(1, d * 9); moving = Math.sin(Math.PI * k); } }; };
+  const reverse = (dist) => { let p0 = null; return { dur: dist / 0.25 + 0.3, init() { p0 = rb.position.clone(); }, fn(k) { const e = sm(k); rb.position.set(p0.x - Math.sin(h) * dist * e, 0, p0.z - Math.cos(h) * dist * e); moving = 0.4 * Math.sin(Math.PI * k); } }; };
+  const lidTo = (a, dur = 0.3) => { let a0 = 0; return { dur, init() { a0 = lid.rotation.x; }, fn(k) { lid.rotation.x = a0 + (a - a0) * sm(k); } }; };
+  const head = () => { rb.updateMatrixWorld(true); return rb.localToWorld(new V3(0, 1.04, 0)); };
+  const startTan = (pts) => () => { const tg = path(pts).getTangentAt(0); return Math.atan2(tg.x, tg.z); };
+  const swap = (S) => { let P = null, H = null, nd = null;
+    return [turn(() => Math.atan2(S.obj.position.x - rb.position.x, S.obj.position.z - rb.position.z)), lidTo(-1.9),
+      { dur: 0.62, init() { P = S.obj.position.clone(); H = head(); }, fn(k) { S.obj.position.lerpVectors(P, H, k); S.obj.position.y += 0.34 * 4 * k * (1 - k); S.obj.scale.setScalar(1 - 0.35 * k); S.obj.rotation.z = 0.6 * Math.sin(k * Math.PI); if (k >= 1) S.obj.visible = false; } },
+      lidTo(0, 0.28), { dur: 0.8, fn(k) { eyes.forEach((e) => (e.scale.z = k < 0.9 ? 0.25 : 1)); } }, lidTo(-1.9, 0.28),
+      { dur: 0.66, init() { let rc; do { rc = pick(S.list); } while (rc === S.cur); S.cur = rc; nd = S.make(rc); s.add(nd); H = head(); nd.position.copy(H); nd.scale.setScalar(0.65); },
+        fn(k) { nd.position.lerpVectors(H, P, k); nd.position.y += 0.36 * 4 * k * (1 - k); nd.scale.setScalar(0.65 + 0.35 * k); nd.rotation.z = -0.5 * Math.sin(k * Math.PI);
+          if (k >= 1) { const old = S.obj; s.remove(old); old.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); S.obj = nd; } } },
+      { dur: 0.22, fn(k) { const q = Math.sin(k * Math.PI) * 0.12; nd.scale.set(1 + q, 1 - q, 1 + q); } }, lidTo(0), reverse(S.rev)]; };
+  const plan = () => { const out = []; stops.forEach((S) => out.push(turn(startTan(S.path)), drive(S.path), ...swap(S))); out.push(turn(startTan(homePath)), drive(homePath), turn(0)); return out; };
+  rb.userData.state = () => ({ si, n: steps.length, wait });
+  up.push((dt) => { const d = Math.min(dt, 0.05); t += d;
+    if (si >= steps.length) { moving = 0; if ((wait -= d) <= 0) { steps = plan(); si = 0; st = 0; t0 = t; steps[0].init?.(steps[0]); } }
+    else { const S = steps[si]; st += d; const k = Math.min(1, st / S.dur); S.fn?.(k, d); if (k >= 1) { si++; st = 0; if (si < steps.length) steps[si].init?.(steps[si]); else { wait = Math.max(5, R(30, 34) - (t - t0)); moving = 0; } } }
+    rb.rotation.y = h; body.position.y = 0.004 * Math.sin(t * 15) * moving; body.rotation.x = 0.05 * moving;
+    if ((blink -= d) < 0) { blink = R(2.5, 6); } if (si >= steps.length || !steps.length) eyes.forEach((e) => (e.scale.z = blink < 0.12 ? 0.15 : 1));
+    bulbM.color.setHex(Math.sin(t * (si < steps.length ? 9 : 2.2)) > 0.6 ? 0xff5a4a : 0x6a1410); });
+}
+/* smoke hanging in the casino: one instanced batch of soft billboards that drift and turn very slowly. One draw call, a single texture read per pixel */
+let _smokeTex = null;
+function smokeTex() {
+  if (_smokeTex) return _smokeTex; const S = 128, [c, g] = cnv(S * 2, S * 2), im = g.createImageData(S * 2, S * 2), D = im.data;
+  for (let q = 0; q < 4; q++) { const ox = (q % 2) * S, oy = Math.floor(q / 2) * S, sd = q * 17.3 + 3.1;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const u = (x + 0.5) / S - 0.5, v = (y + 0.5) / S - 0.5, r = Math.hypot(u, v) * 2;
+      const wx = fbm(u * 3 + sd, v * 3, sd, 3) * 1.2, wy = fbm(u * 3, v * 3 + sd, sd + 5, 3) * 1.2, n = fbm(u * 4 + wx, v * 4 + wy, sd * 0.37, 4);
+      const a = Math.pow(Math.max(0, 1 - r), 1.25) * Math.min(1, Math.max(0, (n - 0.2) * 1.8)), i = ((oy + y) * S * 2 + ox + x) * 4; D[i] = D[i + 1] = D[i + 2] = Math.round(a * 255); D[i + 3] = 255; } }
+  g.putImageData(im, 0, 0); _smokeTex = toTex(c, null, false); return _smokeTex;
+}
+function casinoSmoke(s, up, w, d) {
+  const N = LOW ? 9 : 16, geo = new THREE.PlaneGeometry(1, 1), aP = new Float32Array(N * 4), mt = new THREE.Matrix4();
+  const mat = new THREE.ShaderMaterial({ uniforms: { uT: { value: 0 }, uMap: { value: smokeTex() }, uCol: { value: new THREE.Color(0xb4a8c4) } }, transparent: true, depthWrite: false,
+    vertexShader: `attribute vec4 aP; uniform float uT; varying vec2 vUv; varying float vA;
+      void main() { vec4 c = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0); float ph = aP.y;
+        c.xyz += vec3(sin(uT * 0.05 + ph) * 0.7, sin(uT * 0.07 + ph * 1.7) * 0.12, cos(uT * 0.04 + ph * 1.3) * 0.7);
+        vec4 mv = modelViewMatrix * c; float an = ph * 6.2831 + uT * (0.01 + 0.012 * fract(ph * 7.3)) * (fract(ph * 3.1) < 0.5 ? -1.0 : 1.0);
+        mv.xy += mat2(cos(an), sin(an), -sin(an), cos(an)) * position.xy * aP.x; gl_Position = projectionMatrix * mv;
+        vUv = (uv + vec2(mod(aP.z, 2.0), floor(aP.z / 2.0))) * 0.5;
+        vA = aP.w * (0.7 + 0.3 * sin(uT * 0.11 + ph * 2.3)) * smoothstep(0.9, 3.0, -mv.z); }`,
+    fragmentShader: `uniform sampler2D uMap; uniform vec3 uCol; varying vec2 vUv; varying float vA;
+      void main() { float a = texture2D(uMap, vUv).r * vA; if (a < 0.002) discard; gl_FragColor = vec4(uCol, a);
+        #include <colorspace_fragment>
+      }` });
+  const im = new THREE.InstancedMesh(geo, mat, N);
+  for (let k = 0; k < N; k++) { const hi = k < N * 0.65; let x, y, z, n = 0; do { x = R(-w / 2 + 1.5, w / 2 - 1.5); z = R(-d / 2 + 1.2, d / 2 - 2.0); y = hi ? R(2.5, 3.2) : R(1.7, 2.3); } while (n++ < 40 && (Math.hypot(x - 2.6, z - 5.2) < 3.2 || (!hi && Math.hypot(x + 0.9, z) < 2.2)));
+    mt.makeTranslation(x, y, z); im.setMatrixAt(k, mt); aP.set([hi ? R(3.0, 4.6) : R(2.2, 3.2), R(0, 100), RI(0, 3), hi ? R(0.55, 0.85) : R(0.4, 0.6)], k * 4); }
+  geo.setAttribute('aP', new THREE.InstancedBufferAttribute(aP, 4)); im.frustumCulled = false; im.renderOrder = 3; im.userData.noBatch = true; im.userData.noCast = true; s.add(im);
+  up.push((dt) => { mat.uniforms.uT.value += Math.min(dt, 0.05); });
+}
 // video look: upholstered walls, curved warm coves, a recessed ring dome with downlights, a round CASINO bar, a pit in the aisle
 function paddedTex() {
   const W = 1800, H = 430, [c, g] = cnv(W, H), [hc, hg] = cnv(W, H), top = H * 0.66;
@@ -865,15 +945,27 @@ function videoCasino(s, w, d, h, up) {
   const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.435, 0.435, 0.36, 64, 1, true), basic({ map: toTex(lc) })); crown.position.y = 2.55; B.add(crown);
   lathe([[0.42, 0], [0.9, 0.12], [1.1, 0.22], [1.1, 0.3], [0.42, 0.3]], cream, 0, h - 0.62, 0, B, 72); torus(1.1, 0.025, cyan, 0, h - 0.4, 0, B, 96).rotation.x = Math.PI / 2;
   const bL = new THREE.PointLight(0x5ae8ff, 6, 6, 1.5); bL.position.set(0, 1.6, 0); B.add(bL); const bg2 = glow(0x5ae8ff, 3.2, 0.14); bg2.position.set(0, 0.6, 0); B.add(bg2);
-  for (let k = 0; k < 9; k++) { const a = R(0, 6.28), r = R(0.6, 0.8); lathe([[0, 0], [0.035, 0], [0.035, 0.16], [0.012, 0.22], [0.012, 0.26], [0, 0.26]], phys({ color: pick([0x2a6a2a, 0x8a4a10, 0xd8d0c0, 0x5a1020, 0x1a3a6a]), roughness: 0.1, transparent: true, opacity: 0.85, clearcoat: 1 }), Math.cos(a) * r, 1.085, Math.sin(a) * r, B, 12); }
+  for (let k = 0; k < 9; k++) { let a = R(0, 6.28); while (Math.abs(Math.atan2(Math.sin(a - 1.87), Math.cos(a - 1.87))) < 0.4) a = R(0, 6.28); const r = R(0.6, 0.8); lathe([[0, 0], [0.035, 0], [0.035, 0.16], [0.012, 0.22], [0.012, 0.26], [0, 0.26]], phys({ color: pick([0x2a6a2a, 0x8a4a10, 0xd8d0c0, 0x5a1020, 0x1a3a6a]), roughness: 0.1, transparent: true, opacity: 0.85, clearcoat: 1 }), Math.cos(a) * r, 1.085, Math.sin(a) * r, B, 12); }
   // tall magenta bar stools round it
   const mag = std({ color: 0xb03072, roughness: 0.75 });
   for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2 + 0.3; if (Math.sin(a) < -0.7) continue; const x = Math.cos(a) * 1.5, z = Math.sin(a) * 1.5; cyl(0.2, 0.2, 0.1, mag, x, 0.86, z, B, 28); torus(0.2, 0.012, chrome, x, 0.81, z, B, 28).rotation.x = Math.PI / 2; cyl(0.03, 0.03, 0.8, chrome, x, 0.41, z, B, 10); torus(0.16, 0.01, chrome, x, 0.32, z, B, 24).rotation.x = Math.PI / 2; cyl(0.2, 0.22, 0.03, chrome, x, 0.015, z, B, 24); }
-  // the game table in the aisle: rings of digits turning slowly, numbers flicking over, the 0★ turning in the middle
-  { const TX = -0.25, TZ = 2.45, T = new THREE.Group(); T.position.set(TX, 0, TZ); s.add(T); const lac = phys({ color: 0x15101e, roughness: 0.22, clearcoat: 1 });
+  // the game table near the front: rings of symbols (not numbers, so it never reads as a second roulette) turning slowly and flicking over, the 0★ in the middle
+  { const TX = 0.05, TZ = 2.85, T = new THREE.Group(); T.position.set(TX, 0, TZ); s.add(T); const lac = phys({ color: 0x15101e, roughness: 0.22, clearcoat: 1 });
     lathe([[0, 0], [0.56, 0], [0.56, 0.04], [0.3, 0.1], [0.2, 0.6], [0.44, 0.7], [0, 0.7]], lac, 0, 0, 0, T, 48); torus(0.6, 0.01, cyan, 0, 0.012, 0, T, 96).rotation.x = Math.PI / 2;
     cyl(1.0, 0.95, 0.06, lac, 0, 0.71, 0, T, 96); torus(1.0, 0.03, chrome, 0, 0.745, 0, T, 128).rotation.x = Math.PI / 2;
-    const [dc, dg] = cnv(1280, 128); dg.fillStyle = '#000'; dg.fillRect(0, 0, 1280, 128); dg.fillStyle = '#fff'; dg.textAlign = 'center'; dg.textBaseline = 'middle'; dg.font = '118px "Bebas Neue"'; for (let k = 0; k < 10; k++) dg.fillText(String(k), k * 128 + 64, 70);
+    const [dc, dg] = cnv(1280, 128); dg.fillStyle = '#000'; dg.fillRect(0, 0, 1280, 128); dg.fillStyle = '#fff'; dg.strokeStyle = '#fff'; dg.lineCap = dg.lineJoin = 'round';
+    const pstar = (n, r1, r2, y0 = 0) => { dg.beginPath(); for (let k = 0; k < n * 2; k++) { const r = k % 2 ? r2 : r1, an = (k / (n * 2)) * Math.PI * 2 - Math.PI / 2; dg.lineTo(Math.cos(an) * r, y0 + Math.sin(an) * r); } dg.closePath(); dg.fill(); };
+    [() => pstar(5, 50, 20, 4), // star, diamond, heart, spade, club, moon, sparkle, bell, cherries, bolt
+      () => { dg.beginPath(); dg.moveTo(0, -50); dg.lineTo(36, 0); dg.lineTo(0, 50); dg.lineTo(-36, 0); dg.closePath(); dg.fill(); },
+      () => { dg.beginPath(); dg.moveTo(0, 44); dg.bezierCurveTo(-26, 22, -50, 4, -48, -16); dg.bezierCurveTo(-46, -42, -12, -46, 0, -22); dg.bezierCurveTo(12, -46, 46, -42, 48, -16); dg.bezierCurveTo(50, 4, 26, 22, 0, 44); dg.fill(); },
+      () => { dg.beginPath(); dg.moveTo(0, -48); dg.bezierCurveTo(-26, -24, -50, -6, -48, 14); dg.bezierCurveTo(-46, 38, -14, 40, -4, 22); dg.lineTo(-16, 48); dg.lineTo(16, 48); dg.lineTo(4, 22); dg.bezierCurveTo(14, 40, 46, 38, 48, 14); dg.bezierCurveTo(50, -6, 26, -24, 0, -48); dg.fill(); },
+      () => { [[0, -24], [-24, 6], [24, 6]].forEach(([x, y]) => { dg.beginPath(); dg.arc(x, y, 20, 0, 7); dg.fill(); }); dg.beginPath(); dg.moveTo(-14, 48); dg.lineTo(14, 48); dg.lineTo(0, 4); dg.closePath(); dg.fill(); },
+      () => { dg.beginPath(); dg.arc(0, 0, 44, 0, 7); dg.fill(); dg.fillStyle = '#000'; dg.beginPath(); dg.arc(20, -14, 38, 0, 7); dg.fill(); },
+      () => pstar(4, 52, 12),
+      () => { dg.beginPath(); dg.moveTo(-38, 26); dg.quadraticCurveTo(-34, -40, 0, -44); dg.quadraticCurveTo(34, -40, 38, 26); dg.closePath(); dg.fill(); dg.fillRect(-44, 22, 88, 10); dg.beginPath(); dg.arc(0, 40, 9, 0, 7); dg.fill(); },
+      () => { dg.lineWidth = 6; dg.beginPath(); dg.moveTo(-18, 8); dg.quadraticCurveTo(0, -38, 22, -44); dg.moveTo(18, 12); dg.quadraticCurveTo(10, -18, 22, -44); dg.stroke(); [[-20, 24], [18, 28]].forEach(([x, y]) => { dg.beginPath(); dg.arc(x, y, 19, 0, 7); dg.fill(); }); },
+      () => { dg.beginPath(); dg.moveTo(12, -50); dg.lineTo(-28, 6); dg.lineTo(-2, 6); dg.lineTo(-14, 50); dg.lineTo(28, -8); dg.lineTo(2, -8); dg.closePath(); dg.fill(); }
+    ].forEach((f, k) => { dg.save(); dg.translate(k * 128 + 64, 64); f(); dg.restore(); });
     const gm = new THREE.ShaderMaterial({ uniforms: { uT: { value: 0 }, uDig: { value: toTex(dc, null, false) }, uLogo: { value: zeroTex } },
       vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
       fragmentShader: `uniform float uT; uniform sampler2D uDig, uLogo; varying vec2 vUv;
@@ -885,15 +977,15 @@ function videoCasino(s, w, d, h, up) {
           const float R0 = 0.32, R1 = 0.97;
           if (r > R0 && r < R1) {
             float rr = (r - R0) / (R1 - R0) * 4.0, ri = floor(rr), rf = fract(rr), dir = mod(ri, 2.0) < 0.5 ? 1.0 : -1.0, cells = 12.0 + ri * 7.0;
-            float ca = (-a / 6.2831853 + 0.5 + uT * (0.035 + 0.012 * ri) * dir) * cells, ci = mod(floor(ca), cells), cf = fract(ca);
-            float sd = h21(vec2(ci, ri + 3.0)), tick = floor(uT * (0.18 + 0.5 * sd) + sd * 13.0), dgt = floor(h21(vec2(ci * 1.37 + tick * 7.3, ri + tick * 0.61)) * 10.0);
+            float ca = (-a / 6.2831853 + 0.5 + uT * (0.014 + 0.005 * ri) * dir) * cells, ci = mod(floor(ca), cells), cf = fract(ca);
+            float sd = h21(vec2(ci, ri + 3.0)), tick = floor(uT * (0.06 + 0.16 * sd) + sd * 13.0), dgt = floor(h21(vec2(ci * 1.37 + tick * 7.3, ri + tick * 0.61)) * 10.0);
             vec2 g = (vec2(cf, rf) - 0.5) * vec2(1.05, 1.2) + 0.5; float k = cells / 6.2831853 * 1.05 / 10.0, kr = 4.0 / (R1 - R0) * 1.2;
             float m = (g.x > 0.0 && g.x < 1.0 && g.y > 0.02 && g.y < 0.98) ? textureGrad(uDig, vec2((dgt + g.x) / 10.0, g.y), vec2(dax * k, dFdx(r) * kr), vec2(day * k, dFdy(r) * kr)).r : 0.0;
             vec3 rc = ri < 0.5 ? vec3(0.35, 0.9, 1.0) : ri < 1.5 ? vec3(1.0, 0.38, 0.86) : ri < 2.5 ? vec3(1.0, 0.8, 0.36) : vec3(0.62, 0.7, 1.0);
-            float hot = step(0.97, h21(vec2(ci + 0.5, ri + floor(uT * 1.5) * 0.37))), sweep = pow(max(0.0, cos(a - uT * 0.9)), 24.0);
+            float hot = step(0.97, h21(vec2(ci + 0.5, ri + floor(uT * 0.6) * 0.37))), sweep = pow(max(0.0, cos(a - uT * 0.4)), 24.0);
             col += rc * m * (0.55 + 0.7 * hot + 0.6 * sweep) + rc * (0.22 + 0.25 * sweep) * (smoothstep(0.07, 0.0, rf) + smoothstep(0.93, 1.0, rf)) + rc * 0.05 * (smoothstep(0.04, 0.0, cf) + smoothstep(0.96, 1.0, cf));
           }
-          if (r < R0) { float an = -uT * 0.2; vec2 q = mat2(cos(an), -sin(an), sin(an), cos(an)) * p / R0; if (abs(q.x) < 0.95 && abs(q.y) < 0.95) col += texture(uLogo, q * 0.54 + 0.5).rgb * 1.15; }
+          if (r < R0) { float an = -uT * 0.08; vec2 q = mat2(cos(an), -sin(an), sin(an), cos(an)) * p / R0; if (abs(q.x) < 0.95 && abs(q.y) < 0.95) col += texture(uLogo, q * 0.54 + 0.5).rgb * 1.15; }
           col += vec3(0.3, 0.5, 1.0) * smoothstep(0.02, 0.0, abs(r - R0)) * 0.6 + vec3(0.25, 0.45, 1.0) * smoothstep(0.93, 1.0, r) * 0.5;
           gl_FragColor = vec4(col, 1.0);
           #include <colorspace_fragment>
@@ -906,7 +998,12 @@ function videoCasino(s, w, d, h, up) {
   // a high-top for two between the left bank and the bar
   { const C = new THREE.Group(); C.position.set(-1.75, 0, -2.85); s.add(C); const dk = phys({ color: 0x1a1424, roughness: 0.15, clearcoat: 1 });
     cyl(0.24, 0.26, 0.03, chrome, 0, 0.015, 0, C, 32); cyl(0.03, 0.03, 1.0, chrome, 0, 0.52, 0, C, 12); cyl(0.36, 0.36, 0.03, dk, 0, 1.04, 0, C, 48); torus(0.36, 0.008, cyan, 0, 1.04, 0, C, 64).rotation.x = Math.PI / 2;
-    [[0.08, 0.06, 0xff7ad8], [-0.1, -0.05, 0x7af4ff]].forEach(([x, z, c]) => { lathe([[0, 0], [0.03, 0], [0.006, 0.01], [0.006, 0.08], [0.045, 0.14], [0, 0.135]], phys({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.45 }), x, 1.055, z, C, 16); cyl(0.036, 0.004, 0.035, basic({ color: c }), x, 1.18, z, C, 12); });
+    const d1 = mkDrink('martini', 0x7af4ff); d1.position.set(-0.1, 1.055, -0.05); C.add(d1);
+    // what the waiter swaps lives in the room itself (world coordinates): a bottle on the bar counter, a drink here
+    const barB = mkBottle(BOTTLES[0]); barB.position.set(1.18, 1.085, -2.43); s.add(barB); const hiD = mkDrink(DRINKS[0][0], DRINKS[0][1]); hiD.position.set(-1.67, 1.055, -2.79); s.add(hiD);
+    // one trip: over to the bar to grab a bottle, across to the high-top with a fresh drink, then back to its spot
+    waiterBot(s, up, [{ obj: barB, cur: BOTTLES[0], list: BOTTLES, make: mkBottle, path: [[-0.3, -1.7], [0.45, -1.4], [0.97, -1.76]], rev: 0.2 },
+      { obj: hiD, cur: DRINKS[0], list: DRINKS, make: (r) => mkDrink(r[0], r[1]), path: [[0.2, -1.45], [-0.7, -1.62], [-1.55, -1.55], [-1.7, -2.12]], rev: 0.35 }], [-0.45, -2.5], [[-1.05, -2.0], [-0.45, -2.5]]);
     const mag = std({ color: 0xb03072, roughness: 0.75 }); [-0.55, 0.55].forEach((x) => { cyl(0.18, 0.18, 0.09, mag, x, 0.82, 0.05, C, 28); torus(0.18, 0.01, chrome, x, 0.78, 0.05, C, 28).rotation.x = Math.PI / 2; cyl(0.026, 0.026, 0.78, chrome, x, 0.39, 0.05, C, 10); torus(0.14, 0.009, chrome, x, 0.3, 0.05, C, 24).rotation.x = Math.PI / 2; cyl(0.19, 0.21, 0.03, chrome, x, 0.015, 0.05, C, 24); }); }
   ledSign(s, up, { w: 3.4, h: 0.34, x: -w / 2 + 0.07, y: 2.72, z: -3.95, ry: Math.PI / 2, scroll: 'NO ONE EVER REGRETS THEIR TIME IN THE CASINO!', color: 0xff4a2a });
   ledSign(s, up, { w: 2.4, h: 0.56, x: -6.5, y: 2.74, z: -d / 2 + 0.07, ry: 0, color: 0xffb347, flip: [['THE HOUSE ALWAYS LOSES', 'HERE AT M0!'], ['RELAX, DRINK, BET...', 'BE HAPPY!'], ["DON'T REGRET IT TOMORROW,", 'BET MORE TODAY!']] });
