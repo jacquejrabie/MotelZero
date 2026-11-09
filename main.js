@@ -433,14 +433,8 @@ function czRender(msg) {
   czEl.querySelectorAll('[data-chip]').forEach((b) => b.classList.toggle('on', +b.dataset.chip === CZ.chip));
   if (msg != null) $('#czMsg').innerHTML = msg; $('#czSpin').disabled = CZ.spinning; czEl.classList.toggle('spinning', CZ.spinning);
 }
-const _cc = new THREE.PerspectiveCamera();
-function czSide() {
-  if (portrait()) { czEl.classList.remove('left'); return; }
-  _cc.fov = cam.fov; _cc.aspect = aspect(); _cc.updateProjectionMatrix(); _cc.position.copy(cam.pos); _cc.lookAt(cam.target); _cc.updateMatrixWorld();
-  const p = interiors.casino.views.wheel.target.clone().project(_cc), x = (p.x * 0.5 + 0.5) * innerWidth, pw = Math.min(410, innerWidth - 24) + 26;
-  const overR = Math.max(0, x + 110 - (innerWidth - pw)), overL = Math.max(0, pw - (x - 110)); czEl.classList.toggle('left', overR > 0 && overL < overR);
-}
-function showCasino(on) { if (on) czSide(); czEl.classList.toggle('off', !on); if (on) czRender(CZ.hist.length ? null : 'Pick a chip, tap numbers or boxes to bet, then spin.'); }
+// on computers the panel always sits on the left, so the wheel and the felt stay in view; phones get it along the bottom
+function showCasino(on) { czEl.classList.toggle('off', !on); if (on) czRender(CZ.hist.length ? null : 'Pick a chip, tap numbers or boxes to bet, then spin.'); }
 czEl.addEventListener('click', (e) => {
   const chip = e.target.closest('[data-chip]'); if (chip) { CZ.chip = +chip.dataset.chip; czRender(); return; }
   const b = e.target.closest('[data-bet]');
@@ -529,7 +523,7 @@ $('#checkin').onclick = checkIn;
 function onResize() {
   if (pr > prCap()) { pr = prCap(); renderer.setPixelRatio(pr); } renderer.setSize(innerWidth, innerHeight); camera.aspect = aspect(); camera.updateProjectionMatrix(); sizeFX();
   if (state === 'intro') setCam(extView('intro')); else if (state === 'exterior') setCam(extView('exterior')); else if (state === 'landing') setCam(parkView());
-  else if (state === 'lobby') setCam(inView(interiors.lobby.views.lobby, 50, false)); else if (state === 'board') setCam(boardView()); else if (state === 'tv') setCam({ ...interiors.lobby.views.tv, fov: portrait() ? vfovFor(27, 40) : vfovFor(58, 48) }); else if (state === 'casino') { setCam(casinoView()); czSide(); } else if (state === 'room') setCam(inView(interiors[currentRoom].views.room));
+  else if (state === 'lobby') setCam(inView(interiors.lobby.views.lobby, 50, false)); else if (state === 'board') setCam(boardView()); else if (state === 'tv') setCam({ ...interiors.lobby.views.tv, fov: portrait() ? vfovFor(27, 40) : vfovFor(58, 48) }); else if (state === 'casino') setCam(casinoView()); else if (state === 'room') setCam(inView(interiors[currentRoom].views.room));
   else if (state === 'projects') setCam(hallView()); else if (state === 'pool' || SPOTS.includes(state)) setCam(extView(state));
 }
 addEventListener('resize', onResize);

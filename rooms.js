@@ -178,19 +178,19 @@ export function buildLobby(ctx) {
     const [nc, ng] = cnv(256, 180); ng.fillStyle = '#f2ece0'; ng.fillRect(0, 0, 256, 180); ng.fillStyle = '#1a1416'; ng.font = '44px "Bebas Neue"'; ng.textAlign = 'center'; ng.textBaseline = 'middle'; ng.fillText('NO SMOKING', 128, 148);
     ng.fillStyle = '#d8d2c4'; ng.fillRect(72, 66, 96, 16); ng.fillStyle = '#c87a3a'; ng.fillRect(148, 66, 20, 16); ng.strokeStyle = '#c0182a'; ng.lineWidth = 9; ng.beginPath(); ng.arc(128, 74, 50, 0, 7); ng.stroke(); ng.beginPath(); ng.moveTo(93, 39); ng.lineTo(163, 109); ng.stroke(); grime(ng, 256, 180, 0.25);
     const nt = toTex(nc); [0.017, -0.017].forEach((z, i) => { const q = quad(0.34, 0.24, std({ map: nt, roughness: 0.5 }), 0, 1.4, z, st); if (i) q.rotation.y = Math.PI; });
-    const sh = box(0.5, 1.6, 0.5, basic({ color: 0xffffff }), 0, 0.8, 0, st); sh.visible = false; sh.userData.lobby = 'smoke';
+    const hitM = basic({ color: 0xffffff }); [[0.46, 0.34, 0.12, 1.4], [0.12, 1.2, 0.12, 0.66], [0.46, 0.08, 0.46, 0.04]].forEach(([bw, bh, bd, by]) => { const sh = box(bw, bh, bd, hitM, 0, by, 0, st); sh.visible = false; sh.userData.lobby = 'smoke'; });
     // tap: it rocks on its base. Tap again while it's still rocking: over it goes, to the right. Tap it lying down: stood back up
     let wobT = 0, last = -9, mode = 'up', th = 0, om = 0, bounces = 0, rise = 0; const TF = -1.42;
     lfx.smoke = () => { const now = performance.now() / 1000;
-      if (mode === 'down') { mode = 'rising'; rise = 0; ctx.sfx && ctx.sfx('clink', 0.5); return; }
+      if (mode === 'down') { mode = 'rising'; rise = 0; return; }
       if (mode !== 'up') return;
       if (wobT > 0 && now - last < 1.6) { mode = 'falling'; wobT = 0; om = -0.9; bounces = 0; mid.rotation.z = 0; return; }
-      last = now; wobT = 1.7; ctx.sfx && ctx.sfx('clink', 0.35); };
+      last = now; wobT = 1.7; ctx.sfx && ctx.sfx('wobble', 0.55); };
     up.push((dt) => { const d = Math.min(dt, 0.05);
       if (wobT > 0) { wobT = Math.max(0, wobT - d); const k = 1.7 - wobT; mid.rotation.z = 0.085 * Math.exp(-k * 2.2) * Math.sin(k * 13); }
       if (mode === 'falling') { om -= 11 * Math.sin(Math.abs(th) + 0.06) * d; th += om * d; if (th <= TF) { th = TF; if (bounces++ < 2 && Math.abs(om) > 0.6) { om = -om * 0.22; if (bounces === 1) ctx.sfx && ctx.sfx('thud'); } else { mode = 'down'; om = 0; } } piv.rotation.z = th; }
-      if (mode === 'rising') { rise = Math.min(1, rise + d / 0.7); const e = rise * rise * (3 - 2 * rise); th = TF * (1 - e); piv.rotation.z = th; if (rise >= 1) { th = 0; mode = 'up'; wobT = 0.9; last = -9; } } }); }
-  { const kd = new THREE.Group(); kd.position.set(-2.25, 0, -1.5); kd.rotation.y = 0.45; s.add(kd); const kh = box(0.46, 1.3, 0.46, basic({ color: 0xffffff }), 0, 0.65, 0, kd); kh.visible = false; kh.userData.lobby = 'keys';
+      if (mode === 'rising') { rise = Math.min(1, rise + d / 0.7); const e = rise * rise * (3 - 2 * rise); th = TF * (1 - e); piv.rotation.z = th; if (rise >= 1) { th = 0; mode = 'up'; wobT = 0.9; last = -9; ctx.sfx && ctx.sfx('wobble', 0.35); } } }); }
+  { const kd = new THREE.Group(); kd.position.set(-2.25, 0, -1.5); kd.rotation.y = 0.45; s.add(kd); const kh = box(0.38, 1.18, 0.36, basic({ color: 0xffffff }), 0, 0.59, 0, kd); kh.visible = false; kh.userData.lobby = 'keys';
     // a room key on a brass fob drops into the slot
     const key = new THREE.Group(); key.visible = false; kd.add(key); ldyn.push(key); const kb = phys({ color: 0xd8b25a, roughness: 0.25, metalness: 0.95 }); torus(0.018, 0.005, kb, 0, 0.07, 0, key, 16); box(0.008, 0.07, 0.003, kb, 0, 0.025, 0, key); box(0.012, 0.006, 0.003, kb, 0.008, 0.0, 0, key); box(0.01, 0.006, 0.003, kb, 0.007, 0.014, 0, key); rbox(0.035, 0.07, 0.01, 0.008, phys({ color: 0xc8202a, roughness: 0.4, clearcoat: 0.6 }), 0, 0.12, 0, key, 2);
     let kt = -1, kc2 = false; lfx.keys = () => { if (kt >= 0) return; kt = 0; kc2 = false; key.visible = true; };

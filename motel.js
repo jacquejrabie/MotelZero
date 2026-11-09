@@ -437,11 +437,12 @@ function diner(m, cx, uw, M, up) {
 /* windows that look out. The view is worked out per pixel from where the camera is: stars at infinity, a plain running off to a horizon,
    a line of hills and a pale planet, so it holds together as you move like a real window does. One pass, no textures */
 let _outU = null; const outsideU = () => (_outU || (_outU = { uTime: { value: 0 }, uFloor: { value: 0 } }));
-function outsideMat(rect, hx, hy) {
-  const U = outsideU();
-  return new THREE.ShaderMaterial({ uniforms: { uTime: U.uTime, uFloor: U.uFloor, uRect: { value: rect ? 1 : 0 }, uHalf: { value: new THREE.Vector2(hx, hy) } },
+let _frost = null; // the 0★ mark as a mask, for the frosted decal on the porthole
+function outsideMat(rect, hx, hy, logo = 0) {
+  const U = outsideU(); if (logo && !_frost) { _frost = new THREE.TextureLoader().load('assets/zero_frost.png'); _frost.colorSpace = THREE.NoColorSpace; }
+  return new THREE.ShaderMaterial({ uniforms: { uTime: U.uTime, uFloor: U.uFloor, uRect: { value: rect ? 1 : 0 }, uHalf: { value: new THREE.Vector2(hx, hy) }, uLogo: { value: logo ? _frost : null }, uLogoHalf: { value: logo } },
     vertexShader: `varying vec3 vW; varying vec2 vL; void main() { vL = position.xy; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-    fragmentShader: `uniform float uTime, uFloor, uRect; uniform vec2 uHalf; varying vec3 vW; varying vec2 vL;
+    fragmentShader: `uniform float uTime, uFloor, uRect, uLogoHalf; uniform vec2 uHalf; uniform sampler2D uLogo; varying vec3 vW; varying vec2 vL;
       float h13(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
       float h11(float x) { return fract(sin(x * 127.1) * 43758.5453); }
       float n11(float x) { float i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(h11(i), h11(i + 1.0), f); }
@@ -469,6 +470,9 @@ function outsideMat(rect, hx, hy) {
           } else col = mix(vec3(0.045, 0.045, 0.065), vec3(0.075, 0.072, 0.095), smoothstep(prof - 0.012, prof, el));
           col += vec3(0.16, 0.13, 0.2) * smoothstep(prof - 0.0035, prof, el) * step(0.0, el);
         }
+        // frosted red 0★ on the glass: the view still shows through, softened, under a milky diner red with a fine grain
+        if (uLogoHalf > 0.0) { vec2 lu = vL / (2.0 * uLogoHalf) + 0.5; float m = (lu.x > 0.0 && lu.x < 1.0 && lu.y > 0.0 && lu.y < 1.0) ? texture2D(uLogo, lu).r : 0.0;
+          float fr = 0.86 + 0.14 * n21(vL * 320.0); col = mix(col, col * 0.5 + vec3(0.62, 0.075, 0.1) * fr, m * 0.55); }
         float e = uRect > 0.5 ? max(abs(vL.x) / uHalf.x, abs(vL.y) / uHalf.y) : length(vL) / uHalf.x;
         col *= 1.0 - 0.5 * smoothstep(0.7, 1.0, e);
         col += vec3(0.55, 0.62, 0.72) * exp(-pow((vL.x * 0.75 + vL.y) / uHalf.x - 0.35, 2.0) * 22.0) * 0.045;
@@ -477,7 +481,7 @@ function outsideMat(rect, hx, hy) {
         #include <colorspace_fragment>
       }` });
 }
-/* ---------- video look: a deep space diner behind the glass. Booths, portholes, a glowing counter, Saturn in the window ---------- */
+/* ---------- video look: a deep space diner behind the glass. Booths, portholes, a glowing counter, the moon in the window ---------- */
 function videoDiner(m, cx, uw, up) {
   const g = new THREE.Group(); g.position.set(cx, 0, 0); m.add(g); const hwO = uw / 2 - 0.02, hw = Math.min(hwO, 3.15), WI = hw * 2 + 0.04, z0 = -2.02, z1 = -6.58, H = 3.0, zc = (z0 + z1) / 2, D = z0 - z1;
   const cream = std({ color: 0xeee2cc, roughness: 0.7 }), creamD = std({ color: 0xd8c8ae, roughness: 0.75 }), vinyl = phys({ color: 0xb81c2a, roughness: 0.35, clearcoat: 0.6 }), chromeS = phys({ color: 0xd8d8dc, metalness: 1, roughness: 0.2 }), led = basic({ color: 0xffe8c8 }), neonR = basic({ color: 0xff3a4a }), dark = std({ color: 0x2a2224, roughness: 0.5 });
@@ -530,7 +534,7 @@ function videoDiner(m, cx, uw, up) {
     [[0.1, 0.11, vinyl], [0.84, 0.035, chromeS]].forEach(([y, dd, mm]) => { const b2 = new THREE.Mesh(new THREE.ExtrudeGeometry(shp, { depth: dd, bevelEnabled: false, curveSegments: 24 }), mm); b2.rotation.x = -Math.PI / 2; b2.position.set(0, y, CZ); b2.scale.set(0.976, 0.952, 1); g.add(b2); });
     const cgl2 = glow(0xffd9a0, 4.0, 0.1); cgl2.position.set(0, 0.6, CZ + 0.35); g.add(cgl2); }
   // behind the counter: the big round porthole full of stars, stainless pilasters either side, a lit shelf of bottles
-  { const port = new THREE.Mesh(new THREE.CircleGeometry(0.72, 64), outsideMat(false, 0.72, 0.72)); port.position.set(0, 1.78, z1 + 0.012); port.userData.noBatch = true; g.add(port); const slv = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.08, 64, 1, true).rotateX(Math.PI / 2), std({ color: 0x3a3a42, roughness: 0.35, metalness: 0.6, side: THREE.BackSide })); slv.position.set(0, 1.78, z1 + 0.052); g.add(slv); const prim = torus(0.76, 0.06, chromeS, 0, 1.78, z1 + 0.03, g, 96);
+  { const port = new THREE.Mesh(new THREE.CircleGeometry(0.72, 64), outsideMat(false, 0.72, 0.72, 0.4)); port.position.set(0, 1.78, z1 + 0.012); port.userData.noBatch = true; g.add(port); const slv = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.08, 64, 1, true).rotateX(Math.PI / 2), std({ color: 0x3a3a42, roughness: 0.35, metalness: 0.6, side: THREE.BackSide })); slv.position.set(0, 1.78, z1 + 0.052); g.add(slv); const prim = torus(0.76, 0.06, chromeS, 0, 1.78, z1 + 0.03, g, 96);
     { const sx0 = 1.6, sx1 = hw - 0.25, scx = (sx0 + sx1) / 2, n = Math.floor((sx1 - sx0 - 0.1) / 0.13) + 1, bc = [0x8a4a10, 0xd8b060, 0x6a2010, 0xe8e0c8, 0xc86a2a, 0x2a6a2a];
       box(sx1 - sx0, 0.03, 0.22, cream, scx, 1.12, z1 + 0.11, g); box(sx1 - sx0, 0.012, 0.012, chromeS, scx, 1.135, z1 + 0.222, g);
       for (let k = 0; k < n; k++) lathe([[0, 0], [0.03, 0], [0.03, 0.16], [0.012, 0.22], [0.012, 0.26], [0, 0.26]], phys({ color: pick(bc), roughness: 0.1, transparent: true, opacity: 0.85, clearcoat: 1 }), sx0 + 0.07 + k * 0.13, 1.135, z1 + 0.12, g, 12);
