@@ -877,7 +877,8 @@ function waiterBot(s, up, stops, home, homePath) {
     if ((blink -= d) < 0) { blink = R(2.5, 6); } if (si >= steps.length || !steps.length) eyes.forEach((e) => (e.scale.z = blink < 0.12 ? 0.15 : 1));
     bulbM.color.setHex(Math.sin(t * (si < steps.length ? 9 : 2.2)) > 0.6 ? 0xff5a4a : 0x6a1410); });
 }
-/* smoke hanging in the casino: one instanced batch of soft billboards that drift and turn very slowly. One draw call, a single texture read per pixel */
+/* smoke hanging in the casino: one instanced batch of soft billboards that drift and turn very slowly. One draw call, a single texture read per pixel.
+   More, thinner layers on computers. Drawn without the depth test, so a puff never shows a hard line where it meets the ceiling or a machine; the near ones fade out by distance instead */
 let _smokeTex = null;
 function smokeTex() {
   if (_smokeTex) return _smokeTex; const S = 128, [c, g] = cnv(S * 2, S * 2), im = g.createImageData(S * 2, S * 2), D = im.data;
@@ -888,8 +889,8 @@ function smokeTex() {
   g.putImageData(im, 0, 0); _smokeTex = toTex(c, null, false); return _smokeTex;
 }
 function casinoSmoke(s, up, w, d) {
-  const N = LOW ? 9 : 16, geo = new THREE.PlaneGeometry(1, 1), aP = new Float32Array(N * 4), mt = new THREE.Matrix4();
-  const mat = new THREE.ShaderMaterial({ uniforms: { uT: { value: 0 }, uMap: { value: smokeTex() }, uCol: { value: new THREE.Color(0xb4a8c4) } }, transparent: true, depthWrite: false,
+  const N = LOW ? 12 : 30, A = LOW ? 0.75 : 0.5, geo = new THREE.PlaneGeometry(1, 1), aP = new Float32Array(N * 4), mt = new THREE.Matrix4();
+  const mat = new THREE.ShaderMaterial({ uniforms: { uT: { value: 0 }, uMap: { value: smokeTex() }, uCol: { value: new THREE.Color(0xb4a8c4) } }, transparent: true, depthWrite: false, depthTest: false,
     vertexShader: `attribute vec4 aP; uniform float uT; varying vec2 vUv; varying float vA;
       void main() { vec4 c = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0); float ph = aP.y;
         c.xyz += vec3(sin(uT * 0.05 + ph) * 0.7, sin(uT * 0.07 + ph * 1.7) * 0.12, cos(uT * 0.04 + ph * 1.3) * 0.7);
@@ -903,7 +904,7 @@ function casinoSmoke(s, up, w, d) {
       }` });
   const im = new THREE.InstancedMesh(geo, mat, N);
   for (let k = 0; k < N; k++) { const hi = k < N * 0.65; let x, y, z, n = 0; do { x = R(-w / 2 + 1.5, w / 2 - 1.5); z = R(-d / 2 + 1.2, d / 2 - 2.0); y = hi ? R(2.5, 3.2) : R(1.7, 2.3); } while (n++ < 40 && (Math.hypot(x - 2.6, z - 5.2) < 3.2 || (!hi && Math.hypot(x + 0.9, z) < 2.2)));
-    mt.makeTranslation(x, y, z); im.setMatrixAt(k, mt); aP.set([hi ? R(3.0, 4.6) : R(2.2, 3.2), R(0, 100), RI(0, 3), hi ? R(0.55, 0.85) : R(0.4, 0.6)], k * 4); }
+    mt.makeTranslation(x, y, z); im.setMatrixAt(k, mt); aP.set([hi ? R(3.0, 4.6) : R(2.2, 3.2), R(0, 100), RI(0, 3), (hi ? R(0.55, 0.85) : R(0.4, 0.6)) * A], k * 4); }
   geo.setAttribute('aP', new THREE.InstancedBufferAttribute(aP, 4)); im.frustumCulled = false; im.renderOrder = 3; im.userData.noBatch = true; im.userData.noCast = true; s.add(im);
   up.push((dt) => { mat.uniforms.uT.value += Math.min(dt, 0.05); });
 }

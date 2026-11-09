@@ -6,13 +6,21 @@ export function bindState(fn) { getState = fn; }
 
 export const Snd = {
   ctx: null, on: true,
+  // start fetching the track once the world is ready, so it can play the moment someone checks in
+  preload() { if (this.music) return; const el = (this.music = new Audio('assets/lounge.mp3')); el.loop = true; el.preload = 'auto'; try { el.load(); } catch (e) {} },
+  // the check-in flight: the music swells as the camera comes in, quiet and muffled far out, the exterior level on arrival
+  approach(k) { if (!this.ctx) return; k = Math.min(1, Math.max(0, k || 0)); const e = k * k * (3 - 2 * k); if (Math.abs(e - (this._ap ?? -1)) < 0.008) return; this._ap = e; const t = this.ctx.currentTime;
+    if (this.mg) { this.mg.gain.setTargetAtTime(0.3 * e, t, 0.1); this.mf.frequency.setTargetAtTime(300 + 600 * e, t, 0.1); } else if (this.music) this.music.volume = 0.15 * e;
+    this.hg.gain.setTargetAtTime(0.011 * e, t, 0.2); },
   init() {
     if (this.ctx) return;
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
     const ctx = (this.ctx = new C());
     this.master = ctx.createGain(); this.master.connect(ctx.destination);
     // lounge music
-    const el = (this.music = new Audio('assets/lounge.mp3')); el.loop = true; el.preload = 'auto';
+    const el = (this.music = this.music || new Audio('assets/lounge.mp3')); el.loop = true; el.preload = 'auto';
+    // if the track only gets going after the camera has landed (slow connection), bring it in gently instead of all at once
+    el.addEventListener('playing', () => { if (this._played) return; this._played = true; if (!this.mg || getState() === 'flying') return; const t = ctx.currentTime, g = this.mg.gain.value; if (g > 0.03) { this.mg.gain.cancelScheduledValues(t); this.mg.gain.setValueAtTime(0.0001, t); this.mg.gain.setTargetAtTime(g, t, 1.0); } });
     try {
       const src = ctx.createMediaElementSource(el);
       this.mf = ctx.createBiquadFilter(); this.mf.type = 'lowpass'; this.mf.frequency.value = 600;

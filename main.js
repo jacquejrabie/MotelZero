@@ -446,17 +446,21 @@ async function czSpin() {
   if (CZ.spinning) return; const stake = czTotal(); if (!stake) { czRender('Place a bet first.'); return; }
   CZ.spinning = true; czRender('No more bets…'); const k = Math.floor(Math.random() * 37), n = WHEEL[k], T = 8.5; Snd.roll(T);
   czEl.classList.add('watch'); setCam(wheelView());
-  await interiors.casino.wheel.spin(k, T); await sleep(1100);
-  if (state === 'casino') setCam(casinoView()); czEl.classList.remove('watch');
+  await interiors.casino.wheel.spin(k, T);
   const red = REDS.has(n), col = n === 0 ? 'green' : red ? 'red' : 'black'; let win = 0;
   for (const [key, amt] of Object.entries(CZ.bets)) {
     const hit = key[0] === 'n' ? +key.slice(1) === n : n !== 0 && ((key === 'red' && red) || (key === 'black' && !red) || (key === 'odd' && n % 2 === 1) || (key === 'even' && n % 2 === 0) || (key === 'low' && n <= 18) || (key === 'high' && n >= 19));
     if (hit) win += key[0] === 'n' ? amt * 36 : amt * 2;
   }
+  // the moment the ball settles: the number, then WIN or LOSS and by how much, big over the wheel
+  const net = win - stake, verdict = net > 0 ? `<b class="cz-win">WIN ${net} CREDITS</b>` : net < 0 ? `<b class="cz-loss">LOSS ${-net} CREDITS</b>` : `<b class="cz-even">EVEN</b>`;
+  if (state === 'casino') { const bg = $('#czBig'); bg.className = net > 0 ? 'win' : net < 0 ? 'loss' : ''; bg.innerHTML = `<span class="${col[0]}">${n} ${col.toUpperCase()}</span>${net > 0 ? `WIN ${net} CREDITS` : net < 0 ? `LOSS ${-net} CREDITS` : 'EVEN'}`; void bg.offsetWidth; bg.classList.add('show'); clearTimeout(bg._h); bg._h = setTimeout(() => bg.classList.remove('show'), 2600); }
+  if (win) Snd.chime(win >= stake * 10);
+  await sleep(1700);
+  if (state === 'casino') setCam(casinoView()); czEl.classList.remove('watch');
   CZ.credits += win; CZ.bets = {}; CZ.spinning = false; CZ.hist.unshift({ n, c: col[0] }); if (CZ.hist.length > 12) CZ.hist.length = 12;
   $('#czHist').innerHTML = CZ.hist.map((h) => `<i class="${h.c}">${h.n}</i>`).join('');
-  let msg = `<b class="${col[0]}">${n} ${col.toUpperCase()}</b> · ` + (win ? `you win ${win}` : `the house takes ${stake}`);
-  if (win) Snd.chime(win >= stake * 10);
+  let msg = `<b class="${col[0]}">${n} ${col.toUpperCase()}</b> ${verdict}`;
   if (CZ.credits < 5) { CZ.credits += 100; msg += '<br>Out of credits: +100.'; }
   czSave(); czRender(msg);
 }
@@ -510,11 +514,14 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape' && !['intro', 'loadi
 /* ---------------- intro ---------------- */
 async function checkIn() {
   if (state !== 'intro') return;
-  Snd.init(); Snd.ctx?.resume?.(); Snd.mix('exterior', 1.6); Snd.whoosh(4.2, 0.06); gyroAsk();
+  Snd.init(); Snd.ctx?.resume?.(); Snd.mix('intro'); Snd.whoosh(4.2, 0.06); gyroAsk();
   $('#intro').classList.add('gone'); busy = true; state = 'flying'; hud();
   const r0 = world.rotation.y, r1 = Math.ceil(r0 / (Math.PI * 2)) * Math.PI * 2;
   tween(4.0, (k) => { world.rotation.y = lerp(r0, r1, k); introLogo.material.opacity = 1 - Math.min(1, k * 1.5); introLights.forEach((o) => (o.l.intensity = lerp(o.i, o.base ?? 0, clamp(k * 1.6, 0, 1)))); if (bigMoon) { const mo = clamp((k - 0.25) / 0.6, 0, 1); bigMoon.material.opacity = mo; moonHalo.material.opacity = mo; } });
-  await flyTo(extView('exterior'), 4.4, 34);
+  // the music comes up with the approach: louder the closer the camera gets to the motel
+  const xv = extView('exterior'), D0 = cam.pos.distanceTo(xv.target), D1 = xv.pos.distanceTo(xv.target);
+  tween(4.4, () => Snd.approach(clamp(Math.log(D0 / Math.max(D1, cam.pos.distanceTo(xv.target))) / Math.log(D0 / D1), 0, 1)), (k) => k);
+  await flyTo(xv, 4.4, 34); Snd.approach(1); Snd.mix('exterior');
   introLogo.visible = false; introLights.forEach((o) => { if (!(o.base > 0)) o.l.visible = false; }); state = 'exterior'; busy = false; hud();
   const h = (location.hash || '').slice(1); if (h && (PROJECTS[h] || ['lobby', 'landing', 'projects', 'pool', 'about', 'contact', 'board', 'casino'].includes(h))) go(h);
 }
@@ -607,7 +614,7 @@ addEventListener('pointerdown', () => { if (Snd.ctx && Snd.on && Snd.ctx.state !
 function beginIntro() {
   if (state !== 'loading') return;
   state = 'intro'; hud(); $('#loader').classList.add('gone');
-  const b = $('#checkin'); b.disabled = false; b.innerHTML = 'Check in<small>tap to enter</small>';
+  Snd.preload(); const b = $('#checkin'); b.disabled = false; b.innerHTML = 'Check in<small>tap to enter</small>';
   if (new URLSearchParams(location.search).has('auto')) checkIn();
 }
 
