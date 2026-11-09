@@ -16,7 +16,7 @@ const EMAIL = 'bookmotelzero@gmail.com';
 /* ---------------- projects ---------------- */
 const PROJECTS = {
   kur: { room: 'Suite 307', title: 'KUR', kind: 'Documentary feature', status: 'In production', door: 'documentary · in production', css: '#e9b54d', paper: '#1d1a2b', ink: '#f1e8d4',
-    body: ['How we make sense of death, filmed across cultures around the world.', '<i>Kur</i> is the Sumerian word for both mountain and underworld.'], links: [{ label: 'Ask about KUR', href: `mailto:${EMAIL}?subject=KUR` }] },
+    body: ['How we make sense of death, filmed across cultures around the world.', '<i>Kur</i> is the Sumerian word for both mountain and underworld.'], links: [{ label: 'kurthefilm.com', href: 'https://kurthefilm.com' }] },
   hyodo: { room: 'Room 102', title: "HYODO'S PARADISE", kind: 'Short documentary · 22 min', status: 'Released', door: 'short doc · released', css: '#ff5fa8', paper: '#f6d5e0', ink: '#3a1626',
     body: ['Hyodo lives near Tokyo in a vibrant house filled with hundreds of sex dolls. An unconventional character amidst the normalcy and conformity of Japan, his life blurs the lines between reality and fantasy.', 'Big Sky selection &amp; multiple award winning.'], links: [{ label: 'Watch', href: 'https://directorsnotes.com/2026/08/24/jacque-rabie-hyodos-paradise/' }] },
   orchid: { room: 'Room 101', title: 'ORCHID', kind: 'Narrative feature · 2024', status: 'Out now', door: 'narrative feature · out now', css: '#25633c', t: '#f1e8d4', paper: '#dfe6d2', ink: '#16301e',
