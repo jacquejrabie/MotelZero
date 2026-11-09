@@ -296,7 +296,9 @@ function updateLabels() {
     L.el.classList.toggle('edge-l', left); L.el.classList.toggle('edge-r', right); L.el.style.display = _v.z < 1 ? '' : 'none'; L.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, ${hang ? '0%' : '-100%'})`; L.el.classList.toggle('hang', !!hang);
   }
 }
-function setHash(h) { try { history.replaceState(null, '', h ? '#' + h : location.pathname + location.search); } catch (e) {} }
+// each room gets its own tab title; analytics picks the title up with each address change, so the rooms people visit show up by name
+const ROOM_TITLES = { casino: 'Casino', landing: 'Docking', lobby: 'Lobby', pool: 'Pool', projects: 'Projects', diner: 'Diner', machines: 'Ice & Vending' };
+function setHash(h) { const nm = h ? ROOM_TITLES[h] || PROJECTS[h]?.title || h : ''; document.title = nm ? `Motel Zero · ${nm}` : 'Motel Zero'; try { history.replaceState(null, '', h ? '#' + h : location.pathname + location.search); } catch (e) {} }
 function hud() { const out = !['intro', 'loading', 'exterior', 'flying'].includes(state); $('#home').classList.toggle('show', out); $('#mute').classList.toggle('show', state !== 'loading' && (state !== 'intro' || !!Snd.ctx)); }
 
 /* ---------------- navigation ---------------- */
