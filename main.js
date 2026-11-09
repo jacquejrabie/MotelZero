@@ -502,6 +502,7 @@ canvasEl.addEventListener('pointerup', (e) => {
   if (!down) return; const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null; if (moved > 10 || busy) return;
   const o = pickAt(e.clientX, e.clientY); if (!o) { if (state === 'tv') go('lobby'); return; }
   if (o.userData.ding) { const pl = interiors.lobby?.plunger; if (pl) tween(0.22, (k, r) => (pl.position.y = pl.userData.y0 - Math.sin(r * Math.PI) * 0.025)); Snd.ding(); return; }
+  if (o.userData.lobby) { interiors.lobby?.fx?.[o.userData.lobby]?.(); return; }
   if (o.userData.toast) { const tx = o.userData.toast; toast(Array.isArray(tx) ? pick(tx) : tx); return; }
   if (o.userData.fx) { if (state === o.userData.go) { SPOT_FX[o.userData.fx](); return; } pendingFx = o.userData.fx; }
   if (state === 'pool' && o.userData.poolToast) { const f = motel.pool.swimmer; const r0 = f.rotation.y; tween(1.6, (k) => (f.rotation.y = r0 + k * Math.PI * 0.5)); return; }
@@ -582,7 +583,7 @@ const prog = (p) => { const b = $('#loadbar'); if (b) b.style.transform = `scale
   prog(0.35, 'pouring the parking lot'); motel = buildMotel(world, { PROJECTS, ROOM_COLORS, KUR_HUES, logoTex });
   hotspots.ext.push(...motel.hot); labelsDef = motel.labels; flickers = motel.flickers; doors = motel.doors; extUp.push(...motel.up); await sleep(20);
   labels = labelsDef.map((L) => { const el = document.createElement('div'); el.className = 'lbl'; el.style.setProperty('--c', L.color); el.innerHTML = `<i></i>${L.text}`; el.onclick = () => go(L.go); el.setAttribute('role', 'button'); el.tabIndex = 0; el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(L.go); } }; labelsEl.appendChild(el); return { ...L, el }; });
-  const ctx = { logoTex, tvVideo, envTex, KUR_HUES }; try { ctx.postcardTex = makePostcard(); } catch (e) { console.warn('postcard', e); }
+  const ctx = { logoTex, tvVideo, envTex, KUR_HUES, sfx: (n, v) => Snd[n]?.(v) }; try { ctx.postcardTex = makePostcard(); } catch (e) { console.warn('postcard', e); }
   prog(0.55, 'making the beds'); interiors.lobby = buildLobby(ctx); hotspots.lobby.push(...interiors.lobby.hot); await sleep(20);
   prog(0.7, 'making the beds'); interiors.hyodo = buildHyodo(ctx); interiors.freddie = buildFreddie(ctx); await sleep(20);
   prog(0.85, 'making the beds'); interiors.alien = buildAlien(ctx); interiors.fmk = buildFmk(ctx); interiors.kur = buildKur(ctx); interiors.orchid = buildOrchid(ctx); await sleep(20);

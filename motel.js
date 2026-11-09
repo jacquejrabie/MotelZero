@@ -1,7 +1,7 @@
 // motel.js — the building, its signage, the ship garage, the casino pod, the pool dome and the cars.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { LOW, R, RI, rnd, pick, clamp, lerp, easeOut, cnv, toTex, blotch, speckle, grime, fitFont, neonText, heightToNormal, stuccoTex, concreteTex, woodTex, carpetTex, wallpaperTex, ceilingTex, tileTex, metalTex, acTex, std, phys, basic, texMat, glow, spill, neonQuad, box, rbox, cyl, sph, quad, lathe, torus, RBG, Merger, curtain, glowTex, softTex, VIDEO, VPOOL, coveGeo } from './kit.js';
+import { LOW, R, RI, rnd, pick, clamp, lerp, easeOut, cnv, toTex, blotch, speckle, grime, fitFont, neonText, heightToNormal, stuccoTex, concreteTex, woodTex, carpetTex, wallpaperTex, ceilingTex, tileTex, metalTex, acTex, std, phys, basic, texMat, glow, spill, neonQuad, box, rbox, cyl, sph, quad, lathe, torus, RBG, Merger, curtain, glowTex, softTex, VIDEO, VPOOL, coveGeo, zeroTex } from './kit.js';
 import { RAMP, RWY, LOT_R, PLATEAU } from './space.js';
 
 export const F = 3.2, SX0 = -21, SX1 = 4, TX0 = 4, TX1 = 14;
@@ -72,6 +72,7 @@ export function buildMotel(world, ctx) {
   const stripG = new THREE.BoxGeometry(0.07, F - 0.9, 0.03); const strips = new THREE.InstancedMesh(stripG, cyanStrip, pierXs.length * 5); let si = 0;
   for (const x of pierXs) for (let f = 0; f < 5; f++) {
     if (f >= 4 && x < TX0 - 0.1) continue; if (f === 0 && x < TX0 - 0.1 && x > SX0 + 0.1) continue; // open arcade on the ground floor of the slab
+    if (f === 0 && x === 9) continue; // and nothing standing in the lobby doorway
     M.rbox(0.4, F, 0.6, 0.05, cream, x, f * F + F / 2, 0.25);
     if (f >= 1 || x >= TX0 - 0.1) { mm.makeTranslation(x, f * F + F / 2 + 0.1, 0.56); strips.setMatrixAt(si++, mm); }
   }
@@ -175,7 +176,7 @@ export function buildMotel(world, ctx) {
     flickers.push({ mat: bq.material, rate: 0.25, base: 1 });
   }
   // vending + ice machines in their bays
-  const KV = unitX['ICE · VENDING']; const vendG = new THREE.Group(); vendG.position.set(KV + 0.58, 0, -2.4); m.add(vendG);
+  const KV = unitX['ICE · VENDING'] - 0.4; const vendG = new THREE.Group(); vendG.position.set(KV + 0.58, 0, -2.4); m.add(vendG);
   rbox(1.0, 1.9, 0.8, 0.04, std({ color: 0xa02a2a, roughness: 0.35, metalness: 0.2 }), 0, 0.95, 0, vendG);
   const vface = quad(0.82, 1.6, basic({ map: vendTex(), color: 0xe8e8e8 }), 0, 1.05, 0.41, vendG);
   rbox(0.62, 0.16, 0.06, 0.02, dark, 0, 0.32, 0.41, vendG, 1); box(0.54, 0.1, 0.02, std({ color: 0x050505 }), 0, 0.32, 0.44, vendG);
@@ -248,7 +249,7 @@ export function buildMotel(world, ctx) {
   const [vc3, vg4] = cnv(1024, 160); neonText(vg4, 'VACANCY', 512, 84, '140px "Bebas Neue"', '#3ff3ff', 14);
   const vq = neonQuad(vc3, 6.4, 1.0); vq.position.set(0, 1.9, 0); vac.add(vq); flickers.push({ mat: vq.material, rate: 0.3, base: 1, sputter: true });
   const vgl = glow(0x3ff3ff, 6, 0.08); vgl.position.set(0, 1.9, 0.3); vac.add(vgl);
-  const beacon = sph(0.1, basic({ color: 0xff2020 }), 10.5, F * 5 + 3.6, -0.8, m, 8); beacon.userData.noCast = true; M.cyl(0.02, 0.02, 1.2, steel, 10.5, F * 5 + 3.0, -0.8);
+  const beacon = sph(0.1, basic({ color: 0xff2020 }), -3.6, 3.3, -0.5, vac, 8); beacon.userData.noCast = true; cyl(0.022, 0.035, 3.2, steel, -3.6, 1.6, -0.5, vac, 8); box(0.3, 0.04, 0.3, steel, -3.6, 0.02, -0.5, vac); box(0.5, 0.025, 0.025, steel, -3.6, 2.7, -0.5, vac); box(0.32, 0.025, 0.025, steel, -3.6, 2.95, -0.5, vac);
   up.push((t) => (beacon.material.color.setHex(Math.sin(t * 2.5) > 0.7 ? 0xff3030 : 0x401010)));
   // Motel Zero neon logo on the slab roof, on a frame
   const lg = new THREE.Group(); lg.position.set(-9, F * 4 + 0.5, -1.2); lg.rotation.y = 0.12; m.add(lg);
@@ -433,6 +434,49 @@ function diner(m, cx, uw, M, up) {
 }
 
 
+/* windows that look out. The view is worked out per pixel from where the camera is: stars at infinity, a plain running off to a horizon,
+   a line of hills and a pale planet, so it holds together as you move like a real window does. One pass, no textures */
+let _outU = null; const outsideU = () => (_outU || (_outU = { uTime: { value: 0 }, uFloor: { value: 0 } }));
+function outsideMat(rect, hx, hy) {
+  const U = outsideU();
+  return new THREE.ShaderMaterial({ uniforms: { uTime: U.uTime, uFloor: U.uFloor, uRect: { value: rect ? 1 : 0 }, uHalf: { value: new THREE.Vector2(hx, hy) } },
+    vertexShader: `varying vec3 vW; varying vec2 vL; void main() { vL = position.xy; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform float uTime, uFloor, uRect; uniform vec2 uHalf; varying vec3 vW; varying vec2 vL;
+      float h13(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
+      float h11(float x) { return fract(sin(x * 127.1) * 43758.5453); }
+      float n11(float x) { float i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(h11(i), h11(i + 1.0), f); }
+      float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float n21(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y); }
+      vec3 stars(vec3 d, float N, float thr, float sz, float sd) {
+        vec3 p = d * N, c = floor(p), f = fract(p); float h = h13(c + sd); if (h < thr) return vec3(0.0);
+        vec3 o = vec3(h13(c + sd + 1.7), h13(c + sd + 3.1), h13(c + sd + 5.3)) * 0.6 + 0.2;
+        float b = smoothstep(sz, 0.0, length(f - o)) * (0.35 + 0.65 * fract(h * 13.0)) * (0.8 + 0.2 * sin(uTime * (1.0 + 3.0 * fract(h * 7.0)) + h * 40.0));
+        return b * mix(vec3(0.75, 0.82, 1.0), vec3(1.0, 0.88, 0.75), fract(h * 29.0)); }
+      void main() {
+        vec3 d = normalize(vW - cameraPosition); float el = asin(clamp(d.y, -1.0, 1.0)), az = atan(d.z, d.x);
+        vec3 col = mix(vec3(0.004, 0.005, 0.014), vec3(0.03, 0.026, 0.06), exp(-max(el, 0.0) * 14.0));
+        col += stars(d, 60.0, 0.86, 0.11, 0.0) * 1.3 + stars(d, 150.0, 0.9, 0.16, 11.0) * 0.6;
+        vec3 P = normalize(vec3(-0.06, 0.085, -1.0)), T1 = normalize(cross(P, vec3(0.0, 1.0, 0.0))), T2 = cross(T1, P); float cp = dot(d, P);
+        vec2 q = vec2(dot(d, T1), dot(d, T2)) / sin(0.035); float qq = dot(q, q);
+        if (cp > 0.0 && qq < 1.0) { vec3 nr = vec3(q, sqrt(1.0 - qq)); float lit = clamp(dot(nr, normalize(vec3(0.7, 0.35, 0.6))), 0.0, 1.0);
+          col = mix(vec3(0.012, 0.014, 0.03), vec3(0.62, 0.66, 0.78) * (0.85 + 0.15 * n11(q.y * 9.0 + 2.0)), pow(lit, 0.8)); }
+        else if (cp > 0.0) col += vec3(0.25, 0.32, 0.55) * exp(-(sqrt(qq) - 1.0) * 9.0) * 0.18;
+        float prof = 0.006 + 0.022 * n11(az * 8.0 + 3.0) + 0.009 * n11(az * 27.0 + 7.0);
+        if (el < prof) {
+          if (d.y < -0.0005) { float t = (uFloor - cameraPosition.y) / d.y; vec2 hp = (cameraPosition + d * t).xz;
+            float g = n21(hp * 0.45) * 0.55 + n21(hp * 1.9) * 0.3 + n21(hp * 7.0) * 0.15, cr = smoothstep(0.62, 0.7, n21(hp * 0.22 + 9.0)) * 0.35;
+            col = mix(mix(vec3(0.07, 0.065, 0.075), vec3(0.2, 0.19, 0.2), g) * (1.0 - cr), vec3(0.045, 0.045, 0.065), smoothstep(12.0, 140.0, t));
+          } else col = mix(vec3(0.045, 0.045, 0.065), vec3(0.075, 0.072, 0.095), smoothstep(prof - 0.012, prof, el));
+          col += vec3(0.16, 0.13, 0.2) * smoothstep(prof - 0.0035, prof, el) * step(0.0, el);
+        }
+        float e = uRect > 0.5 ? max(abs(vL.x) / uHalf.x, abs(vL.y) / uHalf.y) : length(vL) / uHalf.x;
+        col *= 1.0 - 0.5 * smoothstep(0.7, 1.0, e);
+        col += vec3(0.55, 0.62, 0.72) * exp(-pow((vL.x * 0.75 + vL.y) / uHalf.x - 0.35, 2.0) * 22.0) * 0.045;
+        col += vec3(0.07, 0.045, 0.025) * smoothstep(0.1, 1.0, -vL.y / uHalf.y) * 0.6;
+        gl_FragColor = vec4(col, 1.0);
+        #include <colorspace_fragment>
+      }` });
+}
 /* ---------- video look: a deep space diner behind the glass. Booths, portholes, a glowing counter, Saturn in the window ---------- */
 function videoDiner(m, cx, uw, up) {
   const g = new THREE.Group(); g.position.set(cx, 0, 0); m.add(g); const hwO = uw / 2 - 0.02, hw = Math.min(hwO, 3.15), WI = hw * 2 + 0.04, z0 = -2.02, z1 = -6.58, H = 3.0, zc = (z0 + z1) / 2, D = z0 - z1;
@@ -474,8 +518,7 @@ function videoDiner(m, cx, uw, up) {
       const ph = new THREE.Group(); ph.position.set(sd * (hw - 0.012), 1.85, bz); ph.rotation.y = -sd * Math.PI / 2; g.add(ph);
       const rr = (w, h, r) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2 + r, -h / 2); sh.lineTo(w / 2 - r, -h / 2); sh.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r); sh.lineTo(w / 2, h / 2 - r); sh.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2); sh.lineTo(-w / 2 + r, h / 2); sh.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r); sh.lineTo(-w / 2, -h / 2 + r); sh.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2); return sh; };
       const frame = rr(1.15, 0.8, 0.32); frame.holes.push(rr(0.95, 0.6, 0.26)); const fr = new THREE.Mesh(new THREE.ExtrudeGeometry(frame, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 3, curveSegments: 12 }), creamD); ph.add(fr);
-      const [sc2, sg2] = cnv(256, 160); sg2.fillStyle = '#04050c'; sg2.fillRect(0, 0, 256, 160); for (let i = 0; i < 140; i++) { sg2.fillStyle = `rgba(255,255,255,${R(0.25, 1)})`; const r = R(0.6, 1.8); sg2.fillRect(R(0, 256), R(0, 160), r, r); }
-      const win = new THREE.Mesh(new THREE.ShapeGeometry(rr(0.95, 0.6, 0.26), 12), basic({ map: toTex(sc2) })); const uvs = win.geometry.attributes.uv, wp = win.geometry.attributes.position; for (let i = 0; i < uvs.count; i++) uvs.setXY(i, wp.getX(i) / 0.95 + 0.5, wp.getY(i) / 0.6 + 0.5); win.position.z = 0.01; ph.add(win);
+      const win = new THREE.Mesh(new THREE.ShapeGeometry(rr(0.95, 0.6, 0.26), 12), outsideMat(true, 0.475, 0.3)); win.position.z = 0.01; win.userData.noBatch = true; ph.add(win);
     });
   });
   { const im = new THREE.InstancedMesh(tuft, vinyl, tufts.length), mt = new THREE.Matrix4(); tufts.forEach(([x, y, z], i) => { mt.makeTranslation(x, y, z); im.setMatrixAt(i, mt); }); g.add(im); }
@@ -487,10 +530,7 @@ function videoDiner(m, cx, uw, up) {
     [[0.1, 0.11, vinyl], [0.84, 0.035, chromeS]].forEach(([y, dd, mm]) => { const b2 = new THREE.Mesh(new THREE.ExtrudeGeometry(shp, { depth: dd, bevelEnabled: false, curveSegments: 24 }), mm); b2.rotation.x = -Math.PI / 2; b2.position.set(0, y, CZ); b2.scale.set(0.976, 0.952, 1); g.add(b2); });
     const cgl2 = glow(0xffd9a0, 4.0, 0.1); cgl2.position.set(0, 0.6, CZ + 0.35); g.add(cgl2); }
   // behind the counter: the big round porthole full of stars, stainless pilasters either side, a lit shelf of bottles
-  { const [pc, pg] = cnv(512, 512); pg.fillStyle = '#04050b'; pg.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 520; i++) { const r = Math.pow(R(0, 1), 3) * 2.4 + 0.5; pg.fillStyle = `rgba(${pick(['255,255,255', '255,240,220', '220,232,255'])},${R(0.25, 1)})`; pg.fillRect(R(0, 512), R(0, 512), r, r); }
-    for (let i = 0; i < 9; i++) { const x = R(40, 472), y = R(40, 472), r = R(5, 11), gr = pg.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,250,240,.95)'); gr.addColorStop(1, 'rgba(255,250,240,0)'); pg.fillStyle = gr; pg.fillRect(x - r, y - r, r * 2, r * 2); pg.fillStyle = 'rgba(255,255,255,.7)'; pg.fillRect(x - r * 1.4, y - 0.6, r * 2.8, 1.2); pg.fillRect(x - 0.6, y - r * 1.4, 1.2, r * 2.8); }
-    const port = new THREE.Mesh(new THREE.CircleGeometry(0.72, 64), basic({ map: toTex(pc) })); port.position.set(0, 1.78, z1 + 0.012); g.add(port); const prim = torus(0.76, 0.06, chromeS, 0, 1.78, z1 + 0.03, g, 96);
+  { const port = new THREE.Mesh(new THREE.CircleGeometry(0.72, 64), outsideMat(false, 0.72, 0.72)); port.position.set(0, 1.78, z1 + 0.012); port.userData.noBatch = true; g.add(port); const slv = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.08, 64, 1, true).rotateX(Math.PI / 2), std({ color: 0x3a3a42, roughness: 0.35, metalness: 0.6, side: THREE.BackSide })); slv.position.set(0, 1.78, z1 + 0.052); g.add(slv); const prim = torus(0.76, 0.06, chromeS, 0, 1.78, z1 + 0.03, g, 96);
     { const sx0 = 1.6, sx1 = hw - 0.25, scx = (sx0 + sx1) / 2, n = Math.floor((sx1 - sx0 - 0.1) / 0.13) + 1, bc = [0x8a4a10, 0xd8b060, 0x6a2010, 0xe8e0c8, 0xc86a2a, 0x2a6a2a];
       box(sx1 - sx0, 0.03, 0.22, cream, scx, 1.12, z1 + 0.11, g); box(sx1 - sx0, 0.012, 0.012, chromeS, scx, 1.135, z1 + 0.222, g);
       for (let k = 0; k < n; k++) lathe([[0, 0], [0.03, 0], [0.03, 0.16], [0.012, 0.22], [0.012, 0.26], [0, 0.26]], phys({ color: pick(bc), roughness: 0.1, transparent: true, opacity: 0.85, clearcoat: 1 }), sx0 + 0.07 + k * 0.13, 1.135, z1 + 0.12, g, 12);
@@ -531,6 +571,7 @@ function videoDiner(m, cx, uw, up) {
     g.userData.mug = { x: mx, z: mz, coffee }; g.userData.W = 6;
     const puffs = []; for (let i = 0; i < 9; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xf6f2ec, transparent: true, depthWrite: false, opacity: 0 })); g.add(sp); puffs.push({ sp, t: i / 9 }); }
     up.push((t, dt) => { for (const pf of puffs) { pf.t = (pf.t + dt / 2.8) % 1; const k = pf.t, sp = pf.sp; sp.position.set(mx + Math.sin(k * 5 + pf.t * 9 + t * 0.6) * 0.03 * k, Y + 0.12 + k * 0.5, mz + Math.cos(k * 4) * 0.015 * k); sp.scale.setScalar(0.06 + k * 0.26); sp.material.opacity = Math.sin(Math.PI * k) * 0.62; sp.material.rotation = k * 2; } }); }
+  { const _wv = new THREE.Vector3(); up.push((t) => { outsideU().uTime.value = t; g.getWorldPosition(_wv); outsideU().uFloor.value = _wv.y + 0.012; }); }
   const bot = dinerBot(g, up, { Y: 1.065, ZB: CZ - 0.12, ZF: CZ + 0.15, x0: -1.25, x1: 1.25, spots: [-0.85, -0.15], start: -0.6 });
   // the order kiosk just inside the door: tap it and the robot pops a burger out of its head; they land in the aisle and pile up
   const kiosk = new THREE.Group(); kiosk.position.set(0.55, 0, -2.95); kiosk.rotation.y = -0.17; g.add(kiosk); const kred = phys({ color: 0xb81c2a, roughness: 0.3, clearcoat: 0.8 });
@@ -539,6 +580,7 @@ function videoDiner(m, cx, uw, up) {
   const [kc, kg] = cnv(512, 352), kt = toTex(kc); let orders = 0, kflash = 0;
   const drawK = (lit) => { const bgG = kg.createLinearGradient(0, 0, 0, 352); bgG.addColorStop(0, lit ? '#2c3070' : '#161a40'); bgG.addColorStop(1, lit ? '#1c1f4a' : '#0c0e24'); kg.fillStyle = bgG; kg.fillRect(0, 0, 512, 352);
     kg.fillStyle = '#b81c2a'; kg.fillRect(0, 0, 512, 64); kg.fillStyle = '#fff6e8'; kg.textAlign = 'center'; kg.textBaseline = 'middle'; kg.font = '46px "Bebas Neue"'; kg.fillText('ORDER HERE', 256, 35);
+    const zi = zeroTex.image; if (zi && zi.complete && zi.naturalWidth) { kg.save(); kg.globalCompositeOperation = 'lighter'; kg.drawImage(zi, 10, 2, 60, 60); kg.drawImage(zi, 442, 2, 60, 60); kg.restore(); }
     if (orders) { kg.textAlign = 'right'; kg.font = '30px "Bebas Neue"'; kg.fillStyle = '#7af4ff'; kg.fillText('#' + String(orders).padStart(3, '0'), 492, 92); kg.textAlign = 'center'; }
     const bx = 256, by = 168; kg.fillStyle = '#e09a44'; kg.beginPath(); kg.ellipse(bx, by - 12, 86, 50, 0, Math.PI, 0); kg.fill(); kg.fillStyle = '#f4ead0'; for (const [sx, sy] of [[-40, -38], [-10, -50], [22, -44], [50, -30], [-58, -22], [8, -26]]) { kg.beginPath(); kg.ellipse(bx + sx, by + sy, 5, 2.6, 0.3, 0, 7); kg.fill(); }
     kg.fillStyle = '#5aa83a'; kg.beginPath(); kg.moveTo(bx - 94, by - 8); for (let k = 0; k <= 12; k++) kg.lineTo(bx - 94 + k * 15.7, by - 8 + (k % 2 ? 9 : 0)); kg.lineTo(bx + 94, by + 2); kg.lineTo(bx - 94, by + 2); kg.fill();
@@ -561,7 +603,7 @@ function videoDiner(m, cx, uw, up) {
   const launch = (from) => { let it; if (B.length < BN) { it = { slot: B.length }; B.push(it); } else { it = B.reduce((a, b) => (a.born < b.born ? a : b)); if (!it.rest) moving--; }
     const tx = R(-0.28, 0.28), tz = R(-4.25, -3.75), T = R(0.85, 1.0), ty = pile.at(tx, tz, 0.05) + 0.06;
     Object.assign(it, { p: from.clone(), v: new THREE.Vector3((tx - from.x) / T, (ty - from.y + 4.9 * T * T) / T, (tz - from.z) / T), e: new THREE.Euler(R(0, 6), R(0, 6), R(0, 6)), w: new THREE.Vector3(R(-8, 8), R(-5, 5), R(-8, 8)), rest: false, b: 0, born: ++born }); moving++; bim.visible = true; };
-  up.push((t, dt) => { const d = Math.min(dt, 0.05); scr.material.color.setScalar(kflash > 0 ? 1 : 0.86 + 0.14 * (0.5 + 0.5 * Math.sin(t * 3.2))); if (kflash > 0) { kflash -= d; if (kflash <= 0) drawK(false); }
+  let kLogo = false; up.push((t, dt) => { const d = Math.min(dt, 0.05); if (!kLogo && zeroTex.image && zeroTex.image.complete && zeroTex.image.naturalWidth) { kLogo = true; drawK(false); } scr.material.color.setScalar(kflash > 0 ? 1 : 0.86 + 0.14 * (0.5 + 0.5 * Math.sin(t * 3.2))); if (kflash > 0) { kflash -= d; if (kflash <= 0) drawK(false); }
     if (queue > 0) { gap -= d; if (gap <= 0) { gap = 0.16; queue--; bot.head(_h); launch(_h); bot.hop(); } }
     if (!moving) return;
     for (const it of B) { if (it.rest) continue; const p = it.p; it.v.y -= 9.8 * d; p.addScaledVector(it.v, d); it.e.x += it.w.x * d; it.e.y += it.w.y * d; it.e.z += it.w.z * d;

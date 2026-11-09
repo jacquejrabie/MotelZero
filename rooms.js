@@ -1,7 +1,7 @@
 // rooms.js — the lobby and the five room dioramas.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { LOW, R, RI, rnd, pick, clamp, lerp, fbm, vnoise, cnv, toTex, blotch, speckle, grime, fitFont, neonText, heightToNormal, woodTex, carpetTex, wallpaperTex, ceilingTex, tileTex, acTex, concreteTex, std, phys, basic, texMat, glow, spill, neonQuad, box, rbox, cyl, sph, quad, lathe, torus, RBG, Merger, curtain, glowTex, VIDEO, coveGeo } from './kit.js';
+import { LOW, R, RI, rnd, pick, clamp, lerp, fbm, vnoise, cnv, toTex, blotch, speckle, grime, fitFont, neonText, heightToNormal, woodTex, carpetTex, wallpaperTex, ceilingTex, tileTex, acTex, concreteTex, std, phys, basic, texMat, glow, spill, neonQuad, box, rbox, cyl, sph, quad, lathe, torus, RBG, Merger, curtain, glowTex, VIDEO, coveGeo, zeroTex, zeroSign } from './kit.js';
 import { lampMini, plant, palm, makeCar } from './motel.js';
 
 const cream = std({ color: 0xe8e0cf, roughness: 0.7 });
@@ -172,12 +172,29 @@ export function buildLobby(ctx) {
   for (let i = 0; i < 4; i++) { const b = rbox(0.75, 0.015, 0.14, 0.01, texMat(woodTex(64, 32, '#5a3a1e', 2), { roughness: 0.5 }), 0, 0, 0, null, 1); const piv = new THREE.Group(); piv.rotation.y = i * Math.PI / 2; b.position.x = 0.48; b.rotation.x = 0.12; piv.add(b); fan.add(piv); }
   up.push((dt) => (fan.rotation.y += dt * 2.2));
   // a NO SMOKING stanchion by the door and a key-drop pedestal at the end of the desk
-  { const st = new THREE.Group(); st.position.set(-1.95, 0, -0.3); st.rotation.y = 0.5; s.add(st);
+  const lfx = {}, ldyn = [];
+  { const piv = new THREE.Group(); piv.position.set(-1.95 + 0.22, 0, -0.3); s.add(piv); const mid = new THREE.Group(); mid.position.set(-0.22, 0, 0); piv.add(mid); const st = new THREE.Group(); st.rotation.y = 0.5; mid.add(st); ldyn.push(piv);
     cyl(0.2, 0.22, 0.05, chromeM, 0, 0.025, 0, st, 28); cyl(0.016, 0.016, 1.25, chromeM, 0, 0.67, 0, st, 10); rbox(0.38, 0.27, 0.03, 0.01, chromeM, 0, 1.4, 0, st, 1);
     const [nc, ng] = cnv(256, 180); ng.fillStyle = '#f2ece0'; ng.fillRect(0, 0, 256, 180); ng.fillStyle = '#1a1416'; ng.font = '44px "Bebas Neue"'; ng.textAlign = 'center'; ng.textBaseline = 'middle'; ng.fillText('NO SMOKING', 128, 148);
     ng.fillStyle = '#d8d2c4'; ng.fillRect(72, 66, 96, 16); ng.fillStyle = '#c87a3a'; ng.fillRect(148, 66, 20, 16); ng.strokeStyle = '#c0182a'; ng.lineWidth = 9; ng.beginPath(); ng.arc(128, 74, 50, 0, 7); ng.stroke(); ng.beginPath(); ng.moveTo(93, 39); ng.lineTo(163, 109); ng.stroke(); grime(ng, 256, 180, 0.25);
-    const nt = toTex(nc); [0.017, -0.017].forEach((z, i) => { const q = quad(0.34, 0.24, std({ map: nt, roughness: 0.5 }), 0, 1.4, z, st); if (i) q.rotation.y = Math.PI; }); }
-  { const kd = new THREE.Group(); kd.position.set(-2.25, 0, -1.5); kd.rotation.y = 0.45; s.add(kd);
+    const nt = toTex(nc); [0.017, -0.017].forEach((z, i) => { const q = quad(0.34, 0.24, std({ map: nt, roughness: 0.5 }), 0, 1.4, z, st); if (i) q.rotation.y = Math.PI; });
+    const sh = box(0.5, 1.6, 0.5, basic({ color: 0xffffff }), 0, 0.8, 0, st); sh.visible = false; sh.userData.lobby = 'smoke';
+    // tap: it rocks on its base. Tap again while it's still rocking: over it goes, to the right. Tap it lying down: stood back up
+    let wobT = 0, last = -9, mode = 'up', th = 0, om = 0, bounces = 0, rise = 0; const TF = -1.42;
+    lfx.smoke = () => { const now = performance.now() / 1000;
+      if (mode === 'down') { mode = 'rising'; rise = 0; ctx.sfx && ctx.sfx('clink', 0.5); return; }
+      if (mode !== 'up') return;
+      if (wobT > 0 && now - last < 1.6) { mode = 'falling'; wobT = 0; om = -0.9; bounces = 0; mid.rotation.z = 0; return; }
+      last = now; wobT = 1.7; ctx.sfx && ctx.sfx('clink', 0.35); };
+    up.push((dt) => { const d = Math.min(dt, 0.05);
+      if (wobT > 0) { wobT = Math.max(0, wobT - d); const k = 1.7 - wobT; mid.rotation.z = 0.085 * Math.exp(-k * 2.2) * Math.sin(k * 13); }
+      if (mode === 'falling') { om -= 11 * Math.sin(Math.abs(th) + 0.06) * d; th += om * d; if (th <= TF) { th = TF; if (bounces++ < 2 && Math.abs(om) > 0.6) { om = -om * 0.22; if (bounces === 1) ctx.sfx && ctx.sfx('thud'); } else { mode = 'down'; om = 0; } } piv.rotation.z = th; }
+      if (mode === 'rising') { rise = Math.min(1, rise + d / 0.7); const e = rise * rise * (3 - 2 * rise); th = TF * (1 - e); piv.rotation.z = th; if (rise >= 1) { th = 0; mode = 'up'; wobT = 0.9; last = -9; } } }); }
+  { const kd = new THREE.Group(); kd.position.set(-2.25, 0, -1.5); kd.rotation.y = 0.45; s.add(kd); const kh = box(0.46, 1.3, 0.46, basic({ color: 0xffffff }), 0, 0.65, 0, kd); kh.visible = false; kh.userData.lobby = 'keys';
+    // a room key on a brass fob drops into the slot
+    const key = new THREE.Group(); key.visible = false; kd.add(key); ldyn.push(key); const kb = phys({ color: 0xd8b25a, roughness: 0.25, metalness: 0.95 }); torus(0.018, 0.005, kb, 0, 0.07, 0, key, 16); box(0.008, 0.07, 0.003, kb, 0, 0.025, 0, key); box(0.012, 0.006, 0.003, kb, 0.008, 0.0, 0, key); box(0.01, 0.006, 0.003, kb, 0.007, 0.014, 0, key); rbox(0.035, 0.07, 0.01, 0.008, phys({ color: 0xc8202a, roughness: 0.4, clearcoat: 0.6 }), 0, 0.12, 0, key, 2);
+    let kt = -1, kc2 = false; lfx.keys = () => { if (kt >= 0) return; kt = 0; kc2 = false; key.visible = true; };
+    up.push((dt) => { if (kt < 0) return; kt += Math.min(dt, 0.05); const k = Math.min(1, kt / 0.42); key.position.set(0, 1.32 - 0.24 * k * k, 0.2 - 0.03 * k); key.rotation.x = -0.25 * k; if (kt > 0.36 && !kc2) { kc2 = true; ctx.sfx && ctx.sfx('clink', 0.9); } if (kt > 0.5) { key.visible = false; kt = -1; } });
     rbox(0.32, 0.92, 0.32, 0.02, texMat(woodTex(128, 256, '#4a2e18', 3), { roughness: 0.5 }), 0, 0.46, 0, kd, 2); rbox(0.38, 0.24, 0.34, 0.03, brass, 0, 1.04, 0, kd, 2);
     box(0.2, 0.02, 0.02, darkM, 0, 1.1, 0.171, kd); const [kc, kg] = cnv(128, 40); kg.fillStyle = '#2a2016'; kg.fillRect(0, 0, 128, 40); kg.fillStyle = '#e6c26a'; kg.font = '28px "Bebas Neue"'; kg.textAlign = 'center'; kg.textBaseline = 'middle'; kg.fillText('KEY DROP', 64, 22); quad(0.2, 0.06, basic({ map: toTex(kc) }), 0, 0.99, 0.172, kd); }
   // about-us letter board on a brass easel
@@ -185,8 +202,8 @@ export function buildLobby(ctx) {
   // dust in the light
   const dust = []; for (let i = 0; i < 40; i++) { const p = sph(0.006, basic({ color: 0xfff0d0, transparent: true, opacity: 0.5 }), R(-3, 3), R(0.5, 2.8), R(-3, 2), s, 4); p.userData.noCast = true; dust.push(p); }
   up.push((dt, t) => dust.forEach((p, i) => { p.position.y += Math.sin(t * 0.5 + i) * 0.0015; p.position.x += Math.cos(t * 0.3 + i) * 0.001; }));
-  const hot = []; s.traverse((o) => { if (o.isMesh && (o.userData.go || o.userData.ding)) hot.push(o); });
-  return { scene: s, up, hot, plunger, views: { board, lobby: { pos: new THREE.Vector3(0.1, 1.6, 3.7), target: new THREE.Vector3(1.0, 1.3, -2.4), p: { pos: new THREE.Vector3(0.6, 1.72, 2.9), target: new THREE.Vector3(0.72, 1.22, -2.0), minH: 42, base: 64 } }, tv: { pos: new THREE.Vector3(-2.3, 1.95, -0.6), target: new THREE.Vector3(-3.85, 2.2, -2.9) } } };
+  const hot = []; s.traverse((o) => { if (o.isMesh && (o.userData.go || o.userData.ding || o.userData.lobby)) hot.push(o); });
+  return { scene: s, up, hot, plunger, fx: lfx, dyn: ldyn, views: { board, lobby: { pos: new THREE.Vector3(0.1, 1.6, 3.7), target: new THREE.Vector3(1.0, 1.3, -2.4), p: { pos: new THREE.Vector3(0.6, 1.72, 2.9), target: new THREE.Vector3(0.72, 1.22, -2.0), minH: 42, base: 64 } }, tv: { pos: new THREE.Vector3(-2.3, 1.95, -0.6), target: new THREE.Vector3(-3.85, 2.2, -2.9) } } };
 }
 function aboutBoard(s) {
   const W = 1024, H = 1300; const [c, g] = cnv(W, H);
@@ -688,7 +705,7 @@ export function buildCasino(ctx) {
   const w = 16, d = 12, h = 3.8;
   if (!VIDEO) roomBase(s, { ...ctx, w, d, h, wall: wallpaperTex(1800, 430, { bg: '#4a0e16', fg: '#c9a24a', kind: 'damask', scale: 64, wainscot: { col: '#2a1408', frac: 0.3 }, dirt: 0.5 }), floor: carpetTex(['#3a0812', '#c9a24a', '#1a0408'], 'diamond', [6, 4]), ceil: ceilingTex([4, 3], false), hemi: 0xffd8b0, hemiI: 0.22, trim: brass });
   else roomBase(s, { ...ctx, w, d, h, wall: paddedTex(), floor: woodTex(512, 512, '#2e1c12', 12, [6, 4], 0.35), ceil: { map: (() => { const [c, g] = cnv(64, 64); g.fillStyle = '#2a2230'; g.fillRect(0, 0, 64, 64); return toTex(c); })() }, hemi: 0xd8c8ff, hemiI: 0.3, trim: std({ color: 0x9a9aa6, roughness: 0.25, metalness: 0.8 }) });
-  if (VIDEO) videoCasino(s, w, d, h);
+  if (VIDEO) videoCasino(s, w, d, h, up);
   s.background = new THREE.Color(0x070305);
   // ---- the table ----
   const T = new THREE.Group(); s.add(T);
@@ -768,8 +785,8 @@ export function buildCasino(ctx) {
   { // carousel core: lacquered drum, a turning marquee, chasing bulbs
     cyl(0.86, 0.86, 2.36, std({ color: 0x3a0812, roughness: 0.35, metalness: 0.3 }), CX, 1.18, CZ, s, 32);
     const [mc, mg] = cnv(2048, 176); mg.fillStyle = '#12060c'; mg.fillRect(0, 0, 2048, 176); mg.fillStyle = '#c9a24a'; mg.fillRect(0, 8, 2048, 5); mg.fillRect(0, 163, 2048, 5);
-    const words = ['MOON MONEY', '777', 'MEGA JACKPOT', '777']; words.forEach((w2, i) => { neonText(mg, w2, 512 * i + 256, 92, '104px "Bebas Neue"', i % 2 ? '#ffc84a' : '#ff5fd8', 12);
-      const x = 512 * (i + 1), y = 88, r = 18; mg.save(); mg.shadowColor = '#ffc84a'; mg.shadowBlur = 16; mg.fillStyle = '#fff6d8'; mg.beginPath(); mg.moveTo(x, y - r); mg.quadraticCurveTo(x, y, x + r, y); mg.quadraticCurveTo(x, y, x, y + r); mg.quadraticCurveTo(x, y, x - r, y); mg.quadraticCurveTo(x, y, x, y - r); mg.fill(); mg.restore(); });
+    const words = [['GAMBLE MORE NOW!', 768], ['777', 256], ['MORE MORE MORE!', 768], ['777', 256]]; let wx = 0; words.forEach(([w2, ww], i) => { mg.font = fitFont(mg, w2, '104px "Bebas Neue"', ww - 70); neonText(mg, w2, wx + ww / 2, 92, mg.font, i % 2 ? '#ffc84a' : '#ff5fd8', 12); wx += ww;
+      const x = wx, y = 88, r = 18; mg.save(); mg.shadowColor = '#ffc84a'; mg.shadowBlur = 16; mg.fillStyle = '#fff6d8'; mg.beginPath(); mg.moveTo(x, y - r); mg.quadraticCurveTo(x, y, x + r, y); mg.quadraticCurveTo(x, y, x, y + r); mg.quadraticCurveTo(x, y, x - r, y); mg.quadraticCurveTo(x, y, x, y - r); mg.fill(); mg.restore(); });
     const drum = new THREE.Mesh(new THREE.CylinderGeometry(1.12, 1.12, 0.6, 64, 1, true), basic({ map: toTex(mc) })); drum.position.set(CX, 2.72, CZ); s.add(drum);
     const capM = std({ color: 0x1a0a0e, roughness: 0.5 }); const capT = new THREE.Mesh(new THREE.CircleGeometry(1.12, 48).rotateX(-Math.PI / 2), capM); capT.position.set(CX, 3.02, CZ); s.add(capT); const capB = new THREE.Mesh(new THREE.CircleGeometry(1.12, 48).rotateX(Math.PI / 2), capM); capB.position.set(CX, 2.42, CZ); s.add(capB);
     up.push((dt) => { drum.rotation.y += dt * 0.12; });
@@ -820,7 +837,7 @@ function paddedTex() {
   g.fillStyle = '#9a9aa6'; g.fillRect(0, top - 4, W, 8); grime(g, W, H, 0.15);
   return { map: toTex(c), normalMap: toTex(heightToNormal(hc, 2.2), null, false), normalScale: new THREE.Vector2(0.8, 0.8) };
 }
-function videoCasino(s, w, d, h) {
+function videoCasino(s, w, d, h, up) {
   const purple = basic({ color: 0xd07aff }), cyan = basic({ color: 0x7af4ff }), warm = basic({ color: 0xffae6a }), chrome = phys({ color: 0xd8d8e0, metalness: 1, roughness: 0.18, clearcoat: 0.5 });
   // curved coves where walls meet the ceiling, lit warm from a hidden strip (gradient baked into vertex colours, so it costs nothing)
   const coveM = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }), RC = 0.5, ledge = std({ color: 0x2a2234, roughness: 0.6 });
@@ -852,14 +869,78 @@ function videoCasino(s, w, d, h) {
   // tall magenta bar stools round it
   const mag = std({ color: 0xb03072, roughness: 0.75 });
   for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2 + 0.3; if (Math.sin(a) < -0.7) continue; const x = Math.cos(a) * 1.5, z = Math.sin(a) * 1.5; cyl(0.2, 0.2, 0.1, mag, x, 0.86, z, B, 28); torus(0.2, 0.012, chrome, x, 0.81, z, B, 28).rotation.x = Math.PI / 2; cyl(0.03, 0.03, 0.8, chrome, x, 0.41, z, B, 10); torus(0.16, 0.01, chrome, x, 0.32, z, B, 24).rotation.x = Math.PI / 2; cyl(0.2, 0.22, 0.03, chrome, x, 0.015, z, B, 24); }
-  // the pit in the aisle: speckled like space, grated rim
-  const [pc, pg] = cnv(512, 512); pg.fillStyle = '#16121e'; pg.fillRect(0, 0, 512, 512); for (let i = 0; i < 5200; i++) { pg.fillStyle = `rgba(${pick(['210,190,255', '255,200,230', '190,220,255', '255,255,255'])},${R(0.15, 0.85)})`; const r = R(0.5, 2.2); pg.fillRect(R(0, 512), R(0, 512), r, r); }
-  for (let i = 0; i < 9; i++) { pg.fillStyle = pick(['#c8b0a0', '#a89088', '#e0d0c0']); pg.beginPath(); pg.ellipse(R(80, 432), R(80, 432), R(5, 12), R(4, 9), R(0, 3), 0, 7); pg.fill(); }
-  const pit = new THREE.Mesh(new THREE.CircleGeometry(1.15, 64).rotateX(-Math.PI / 2), std({ map: toTex(pc), roughness: 0.4 })); pit.position.set(-0.25, 0.006, 2.45); s.add(pit);
-  torus(1.2, 0.06, chrome, -0.25, 0.012, 2.45, s, 96).rotation.x = Math.PI / 2;
-  { const n = 72, gr = new THREE.InstancedMesh(new THREE.BoxGeometry(0.012, 0.01, 0.12), std({ color: 0x5a5a66, roughness: 0.4, metalness: 0.7 }), n), o = new THREE.Object3D(); for (let k = 0; k < n; k++) { const a = (k / n) * Math.PI * 2; o.position.set(-0.25 + Math.cos(a) * 1.29, 0.01, 2.45 + Math.sin(a) * 1.29); o.rotation.y = -a; o.updateMatrix(); gr.setMatrixAt(k, o.matrix); } s.add(gr); }
+  // the game table in the aisle: rings of digits turning slowly, numbers flicking over, the 0★ turning in the middle
+  { const TX = -0.25, TZ = 2.45, T = new THREE.Group(); T.position.set(TX, 0, TZ); s.add(T); const lac = phys({ color: 0x15101e, roughness: 0.22, clearcoat: 1 });
+    lathe([[0, 0], [0.56, 0], [0.56, 0.04], [0.3, 0.1], [0.2, 0.6], [0.44, 0.7], [0, 0.7]], lac, 0, 0, 0, T, 48); torus(0.6, 0.01, cyan, 0, 0.012, 0, T, 96).rotation.x = Math.PI / 2;
+    cyl(1.0, 0.95, 0.06, lac, 0, 0.71, 0, T, 96); torus(1.0, 0.03, chrome, 0, 0.745, 0, T, 128).rotation.x = Math.PI / 2;
+    const [dc, dg] = cnv(1280, 128); dg.fillStyle = '#000'; dg.fillRect(0, 0, 1280, 128); dg.fillStyle = '#fff'; dg.textAlign = 'center'; dg.textBaseline = 'middle'; dg.font = '118px "Bebas Neue"'; for (let k = 0; k < 10; k++) dg.fillText(String(k), k * 128 + 64, 70);
+    const gm = new THREE.ShaderMaterial({ uniforms: { uT: { value: 0 }, uDig: { value: toTex(dc, null, false) }, uLogo: { value: zeroTex } },
+      vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `uniform float uT; uniform sampler2D uDig, uLogo; varying vec2 vUv;
+        float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        void main() {
+          vec2 p = (vUv - 0.5) * 2.0; float r = length(p), a = atan(p.y, p.x);
+          vec3 col = mix(vec3(0.016, 0.012, 0.04), vec3(0.05, 0.03, 0.1), 1.0 - r);
+          float rr2 = max(r * r, 1e-4), dax = (p.x * dFdx(p.y) - p.y * dFdx(p.x)) / rr2, day = (p.x * dFdy(p.y) - p.y * dFdy(p.x)) / rr2;
+          const float R0 = 0.32, R1 = 0.97;
+          if (r > R0 && r < R1) {
+            float rr = (r - R0) / (R1 - R0) * 4.0, ri = floor(rr), rf = fract(rr), dir = mod(ri, 2.0) < 0.5 ? 1.0 : -1.0, cells = 12.0 + ri * 7.0;
+            float ca = (-a / 6.2831853 + 0.5 + uT * (0.035 + 0.012 * ri) * dir) * cells, ci = mod(floor(ca), cells), cf = fract(ca);
+            float sd = h21(vec2(ci, ri + 3.0)), tick = floor(uT * (0.18 + 0.5 * sd) + sd * 13.0), dgt = floor(h21(vec2(ci * 1.37 + tick * 7.3, ri + tick * 0.61)) * 10.0);
+            vec2 g = (vec2(cf, rf) - 0.5) * vec2(1.05, 1.2) + 0.5; float k = cells / 6.2831853 * 1.05 / 10.0, kr = 4.0 / (R1 - R0) * 1.2;
+            float m = (g.x > 0.0 && g.x < 1.0 && g.y > 0.02 && g.y < 0.98) ? textureGrad(uDig, vec2((dgt + g.x) / 10.0, g.y), vec2(dax * k, dFdx(r) * kr), vec2(day * k, dFdy(r) * kr)).r : 0.0;
+            vec3 rc = ri < 0.5 ? vec3(0.35, 0.9, 1.0) : ri < 1.5 ? vec3(1.0, 0.38, 0.86) : ri < 2.5 ? vec3(1.0, 0.8, 0.36) : vec3(0.62, 0.7, 1.0);
+            float hot = step(0.97, h21(vec2(ci + 0.5, ri + floor(uT * 1.5) * 0.37))), sweep = pow(max(0.0, cos(a - uT * 0.9)), 24.0);
+            col += rc * m * (0.55 + 0.7 * hot + 0.6 * sweep) + rc * (0.22 + 0.25 * sweep) * (smoothstep(0.07, 0.0, rf) + smoothstep(0.93, 1.0, rf)) + rc * 0.05 * (smoothstep(0.04, 0.0, cf) + smoothstep(0.96, 1.0, cf));
+          }
+          if (r < R0) { float an = -uT * 0.2; vec2 q = mat2(cos(an), -sin(an), sin(an), cos(an)) * p / R0; if (abs(q.x) < 0.95 && abs(q.y) < 0.95) col += texture(uLogo, q * 0.54 + 0.5).rgb * 1.15; }
+          col += vec3(0.3, 0.5, 1.0) * smoothstep(0.02, 0.0, abs(r - R0)) * 0.6 + vec3(0.25, 0.45, 1.0) * smoothstep(0.93, 1.0, r) * 0.5;
+          gl_FragColor = vec4(col, 1.0);
+          #include <colorspace_fragment>
+        }` });
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.97, 96).rotateX(-Math.PI / 2), gm); disc.position.y = 0.743; disc.userData.noBatch = true; T.add(disc); up.push((dt, t) => { gm.uniforms.uT.value = t; });
+    const tgl = glow(0x6a7cff, 3.0, 0.1); tgl.position.set(0, 0.85, 0); T.add(tgl);
+    const mag = std({ color: 0xb03072, roughness: 0.75 }); [3.6, 4.35].forEach((an) => { const x = Math.cos(an) * 1.35, z = Math.sin(an) * 1.35; cyl(0.19, 0.19, 0.09, mag, x, 0.64, z, T, 28); torus(0.19, 0.011, chrome, x, 0.6, z, T, 28).rotation.x = Math.PI / 2; cyl(0.028, 0.028, 0.6, chrome, x, 0.3, z, T, 10); cyl(0.19, 0.21, 0.03, chrome, x, 0.015, z, T, 24); });
+    // three glass orbs hanging low over it, under the sightline to the signs on the far walls
+    [[-0.38, 2.2, -0.2, 0xff7ad8], [0.32, 2.36, 0.12, 0x7af4ff], [-0.02, 2.06, 0.38, 0xfff2e0]].forEach(([x, y, z, c]) => { sph(0.11, basic({ color: c }), x, y, z, T, 24); cyl(0.004, 0.004, h - y - 0.11, chrome, x, (h + y + 0.11) / 2, z, T, 6); const og = glow(c, 0.9, 0.35); og.position.set(x, y, z); T.add(og); }); }
+  // a high-top for two between the left bank and the bar
+  { const C = new THREE.Group(); C.position.set(-1.75, 0, -2.85); s.add(C); const dk = phys({ color: 0x1a1424, roughness: 0.15, clearcoat: 1 });
+    cyl(0.24, 0.26, 0.03, chrome, 0, 0.015, 0, C, 32); cyl(0.03, 0.03, 1.0, chrome, 0, 0.52, 0, C, 12); cyl(0.36, 0.36, 0.03, dk, 0, 1.04, 0, C, 48); torus(0.36, 0.008, cyan, 0, 1.04, 0, C, 64).rotation.x = Math.PI / 2;
+    [[0.08, 0.06, 0xff7ad8], [-0.1, -0.05, 0x7af4ff]].forEach(([x, z, c]) => { lathe([[0, 0], [0.03, 0], [0.006, 0.01], [0.006, 0.08], [0.045, 0.14], [0, 0.135]], phys({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.45 }), x, 1.055, z, C, 16); cyl(0.036, 0.004, 0.035, basic({ color: c }), x, 1.18, z, C, 12); });
+    const mag = std({ color: 0xb03072, roughness: 0.75 }); [-0.55, 0.55].forEach((x) => { cyl(0.18, 0.18, 0.09, mag, x, 0.82, 0.05, C, 28); torus(0.18, 0.01, chrome, x, 0.78, 0.05, C, 28).rotation.x = Math.PI / 2; cyl(0.026, 0.026, 0.78, chrome, x, 0.39, 0.05, C, 10); torus(0.14, 0.009, chrome, x, 0.3, 0.05, C, 24).rotation.x = Math.PI / 2; cyl(0.19, 0.21, 0.03, chrome, x, 0.015, 0.05, C, 24); }); }
+  ledSign(s, up, { w: 3.4, h: 0.34, x: -w / 2 + 0.07, y: 2.72, z: -3.95, ry: Math.PI / 2, scroll: 'NO ONE EVER REGRETS THEIR TIME IN THE CASINO!', color: 0xff4a2a });
+  ledSign(s, up, { w: 2.4, h: 0.56, x: -6.5, y: 2.74, z: -d / 2 + 0.07, ry: 0, color: 0xffb347, flip: [['THE HOUSE ALWAYS LOSES', 'HERE AT M0!'], ['RELAX, DRINK, BET...', 'BE HAPPY!'], ["DON'T REGRET IT TOMORROW,", 'BET MORE TODAY!']] });
+  // palms on the left wall, and the 0★ between the two big neons
+  palm(s, -w / 2 + 0.6, 0, -1.0); palm(s, -w / 2 + 0.6, 0, d / 2 - 0.8);
+  zeroSign(0.72, s, -0.35, 2.8, -d / 2 + 0.07);
 }
 function flickerUp(up, mat, rate) { up.push((dt, t) => { mat.opacity = Math.sin(t * rate * 5.3) > 0.985 && Math.random() < 0.6 ? 0.35 : 1; }); }
+/* an LED sign: a grid of round dots, each lit by sampling the text at its centre. Either a line that scrolls through, or a few lines that roll over one to the next */
+function ledSign(parent, up, o) {
+  const dot = o.dot || 0.014, cols = Math.round(o.w / dot), rows = Math.round(o.h / dot), S = 4, G = new THREE.Group(); G.position.set(o.x, o.y, o.z); G.rotation.y = o.ry || 0; parent.add(G);
+  rbox(o.w + 0.08, o.h + 0.08, 0.06, 0.02, std({ color: 0x0c0a10, roughness: 0.5 }), 0, 0, -0.03, G, 2); rbox(o.w + 0.1, o.h + 0.1, 0.04, 0.02, phys({ color: 0xc8c8d0, metalness: 1, roughness: 0.2 }), 0, 0, -0.045, G, 2);
+  let c, g, TW = cols, N = 1;
+  if (o.scroll) { [c, g] = cnv(8, 8); g.font = `${Math.round(rows * S * 0.8)}px "Bebas Neue"`; const tw = Math.ceil(g.measureText(o.scroll).width); TW = Math.ceil((tw + cols * S * 0.6) / S); c.width = TW * S; c.height = rows * S;
+    g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.font = `${Math.round(rows * S * 0.8)}px "Bebas Neue"`; g.fillText(o.scroll, 0, rows * S * 0.54); }
+  else { N = o.flip.length; [c, g] = cnv(cols * S, rows * S * N); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    o.flip.forEach((ls, k) => { const by = k * rows * S, fs = Math.round(rows * S * (ls.length > 1 ? 0.4 : 0.66)); ls.forEach((ln, j) => { g.font = fitFont(g, ln, `${fs}px "Bebas Neue"`, cols * S * 0.94); g.fillText(ln, cols * S / 2, by + rows * S * (ls.length > 1 ? (j ? 0.73 : 0.29) : 0.53)); }); }); }
+  const t = toTex(c, null, false); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter;
+  const col = new THREE.Color(o.color), mat = new THREE.ShaderMaterial({ uniforms: { uMap: { value: t }, uDots: { value: new THREE.Vector2(cols, rows) }, uX: { value: 0 }, uM: { value: 0 }, uTW: { value: TW }, uN: { value: N }, uFlip: { value: o.scroll ? 0 : 1 }, uCol: { value: new THREE.Vector3(col.r, col.g, col.b) } },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform sampler2D uMap; uniform vec2 uDots; uniform float uX, uM, uTW, uN, uFlip; uniform vec3 uCol; varying vec2 vUv;
+      void main() { vec2 cell = vUv * uDots, ci = floor(cell), cf = fract(cell); float px = max(fwidth(cell.x), fwidth(cell.y)), m = mix(smoothstep(0.46, 0.3, length(cf - 0.5)), 0.5, smoothstep(0.3, 0.7, px));
+        float mq = floor(uM * uDots.y + 0.5) / uDots.y;
+        vec2 tc = uFlip > 0.5 ? vec2((ci.x + 0.5) / uDots.x, (uN - mq - 1.0 + (ci.y + 0.5) / uDots.y) / uN) : vec2((ci.x + 0.5 + floor(uX)) / uTW, (ci.y + 0.5) / uDots.y);
+        float v = smoothstep(0.2, 0.7, texture2D(uMap, tc).r);
+        gl_FragColor = vec4(mix(vec3(0.02, 0.016, 0.024), uCol * (0.07 + 1.25 * v), m), 1.0);
+        #include <colorspace_fragment>
+      }` });
+  const panel = quad(o.w, o.h, mat, 0, 0, 0.002, G); panel.userData.noBatch = true;
+  const wash = quad(o.w * 1.35, o.h * 4.2, new THREE.MeshBasicMaterial({ map: glowTex, color: o.color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.16, toneMapped: false }), 0, 0, -0.062, G); wash.userData.noCast = true; wash.userData.noBatch = true;
+  if (o.scroll) up.push((dt) => { mat.uniforms.uX.value = (mat.uniforms.uX.value + Math.min(dt, 0.05) * 24) % TW; });
+  else { let k = 0, hold = 4.5, roll = 0; up.push((dt) => { const d = Math.min(dt, 0.05); if (roll > 0) { roll = Math.max(0, roll - d / 0.45); const e = 1 - roll; mat.uniforms.uM.value = k - 1 + e * e * (3 - 2 * e); if (!roll) mat.uniforms.uM.value = k % N; } else if ((hold -= d) <= 0) { hold = 4.5; k = (k % N) + 1; roll = 1; } }); }
+  return G;
+}
 let _symTex = null;
 function symStrip() {
   if (_symTex) return _symTex; const S = 128, [c, g] = cnv(S, S * 8), cx = S / 2;
@@ -977,7 +1058,7 @@ function slotBank(s, up, P, onWin, look = null) {
   inst(mergeGeometries([-0.15, 0, 0.15].map((x) => new THREE.BoxGeometry(0.075, 0.025, 0.055).rotateX(-0.75).translate(x, 0.84, 0.26).toNonIndexed())), basic({ color: 0xffffff }), N, (i) => glowC[(i + 1) % 4]);
   const strips = inst(mergeGeometries([-0.335, 0.335].map((x) => new THREE.BoxGeometry(0.028, 0.96, 0.028).translate(x, 1.4, 0.19).toNonIndexed())), basic({ color: 0xffffff }), N, (i) => new THREE.Color(glowC[i % 4]).multiplyScalar(0.75).getHex());
   if (!V) inst(RBG(0.64, 0.38, 0.3, 0.05, 2).translate(0, 2.16, 0.02), std({ color: 0xd8d2c4, roughness: 0.3, metalness: 0.7 }));
-  const names = V ? [] : [['LUCKY 7', '#7a0e1c'], ['ZERO G', '#122a6a'], ['MOON MONEY', '#3a1460'], ['COMET CASH', '#0e4a3a'], ['JACKPOT', '#5a1010']];
+  const names = V ? [] : [['LUCKY 7', '#7a0e1c'], ['ZERO G', '#122a6a'], ['MORE MORE MORE!', '#3a1460'], ['COMET CASH', '#0e4a3a'], ['JACKPOT', '#5a1010']];
   const tops = names.map(([n, bg], v) => { const idx = []; for (let i = 0; i < N; i++) if (i % names.length === v) idx.push(i); const im = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.58, 0.31).translate(0, 2.16, 0.175), basic({ map: topperTex(n, bg) }), idx.length); idx.forEach((i, k) => { im.setMatrixAt(k, mach[i]); im.setColorAt(k, new THREE.Color(0xdddddd)); }); s.add(im); return { im, idx }; });
   if (!V) inst(new THREE.CylinderGeometry(0.016, 0.016, 0.56, 8).translate(0.37, 1.38, 0.02), std({ color: 0xd0ccc4, roughness: 0.2, metalness: 1 }));
   if (!V) inst(new THREE.SphereGeometry(0.045, 12, 10).translate(0.37, 1.68, 0.02), std({ color: 0xc0101e, roughness: 0.3 }));
@@ -1050,7 +1131,7 @@ export function buildParking(ctx) {
   // bay numbers and the level sign in neon
   { const [nc, ng] = cnv(2048, 192); ng.clearRect(0, 0, 2048, 192); for (let k = 0; k < 5; k++) neonText(ng, '0' + (k + 1), ((1.4 + k * 2.8) / 14) * 2048, 100, '130px "Bebas Neue"', '#52eaff', 14);
     const nq = neonQuad(nc, 14, 1.31, 1.05); nq.position.set(4.2, 1.85, -d / 2 + 0.05); s.add(nq); }
-  { const [pc, pg] = cnv(1024, 200); pg.clearRect(0, 0, 1024, 200); neonText(pg, 'DOCKING · LEVEL B1', 512, 104, '120px "Bebas Neue"', '#ff4fd8', 16); const pq = neonQuad(pc, 5.6, 1.1, 1.05); pq.position.set(-7.4, 1.9, -d / 2 + 0.05); s.add(pq); }
+  { const [pc, pg] = cnv(1024, 200); pg.clearRect(0, 0, 1024, 200); neonText(pg, 'DOCKING · LEVEL B1', 512, 104, '120px "Bebas Neue"', '#ff4fd8', 16); const pq = neonQuad(pc, 5.6, 1.1, 1.05); pq.position.set(-7.4, 1.9, -d / 2 + 0.05); s.add(pq); zeroSign(0.95, s, -3.95, 1.92, -d / 2 + 0.06); }
   // pillars with hazard bands
   const hz = (() => { const [c, g] = cnv(128, 128); g.fillStyle = '#d8b020'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#141414'; for (let i = -128; i < 256; i += 32) { g.beginPath(); g.moveTo(i, 128); g.lineTo(i + 16, 128); g.lineTo(i + 144, 0); g.lineTo(i + 128, 0); g.closePath(); g.fill(); } return toTex(c, [2, 1]); })();
   [-5.6, -0.0, 5.6, 11.2].forEach((x) => { box(0.7, h, 0.7, texMat(conc, { roughness: 0.9 }), x, h / 2, -2.3, s); box(0.72, 0.6, 0.72, basic({ map: hz }), x, 0.3, -2.3, s); });

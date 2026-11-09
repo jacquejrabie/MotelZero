@@ -205,6 +205,16 @@ export const Snd = {
     [[880, 0], [1320, 0.07]].forEach(([f, d]) => { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f; const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.045, t + d + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.06); o.connect(g).connect(this.master); o.start(t + d); o.stop(t + d + 0.08); });
     const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(170, t + 0.32); o.frequency.exponentialRampToValueAtTime(680, t + 0.43); const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t + 0.32); g.gain.exponentialRampToValueAtTime(0.26, t + 0.335); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5); o.connect(g).connect(this.master); o.start(t + 0.32); o.stop(t + 0.52);
     this.click(t + 0.31, 0.12); },
+  // keys landing in a metal tray: two or three quick inharmonic pings with a tick of noise on each
+  clink(v = 0.6) { if (!this.ctx) return; const ctx = this.ctx, t0 = ctx.currentTime;
+    [[0, 1], [0.05 + Math.random() * 0.03, 0.55], [0.11 + Math.random() * 0.04, 0.28]].forEach(([d, a], j) => { const t = t0 + d, b = 2900 + Math.random() * 500 + j * 230;
+      [[1, 0.16, 0.32], [1.53, 0.09, 0.2], [2.31, 0.05, 0.12], [3.07, 0.03, 0.08]].forEach(([m, gv, dec]) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = b * m; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gv * a * v), t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + dec); o.connect(g).connect(this.master); o.start(t); o.stop(t + dec + 0.02); });
+      this.click(t, 0.1 * a * v); }); },
+  // a metal sign stand hitting the floor: low thump, a burst of dull noise, a short ring from the pole
+  thud() { if (!this.ctx) return; const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.25); const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.connect(g).connect(this.master); o.start(t); o.stop(t + 0.4);
+    const n = ctx.createBufferSource(); n.buffer = this.white(); const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700; const ng = ctx.createGain(); ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(0.35, t + 0.004); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); n.connect(lp).connect(ng).connect(this.master); n.start(t); n.stop(t + 0.2);
+    [[523, 0.05, 0.6], [1307, 0.03, 0.4], [2212, 0.018, 0.25]].forEach(([f, gv, dec]) => { const c = ctx.createOscillator(), cg = ctx.createGain(); c.frequency.value = f * (0.97 + Math.random() * 0.06); cg.gain.setValueAtTime(0.0001, t + 0.01); cg.gain.exponentialRampToValueAtTime(gv, t + 0.014); cg.gain.exponentialRampToValueAtTime(0.0001, t + dec); c.connect(cg).connect(this.master); c.start(t + 0.01); c.stop(t + dec + 0.05); }); },
   ice() { if (!this.ctx) return; const t = this.ctx.currentTime; for (let i = 0; i < 14; i++) this.click(t + 0.05 + Math.random() * 0.7, 0.05 + Math.random() * 0.09); },
   toggle() {
     this.on = !this.on;

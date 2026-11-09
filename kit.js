@@ -217,6 +217,9 @@ export function quad(w, h, mat, x = 0, y = 0, z = 0, parent) { const m = new THR
 export function lathe(pts, mat, x = 0, y = 0, z = 0, parent, seg = 32) { const m = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([a, b]) => new THREE.Vector2(a, b)), seg), mat); m.position.set(x, y, z); if (parent) parent.add(m); return m; }
 export function torus(r, t, mat, x = 0, y = 0, z = 0, parent, seg = 48, arc = Math.PI * 2) { const m = new THREE.Mesh(new THREE.TorusGeometry(r, t, 10, seg, arc), mat); m.position.set(x, y, z); if (parent) parent.add(m); return m; }
 export const RBG = (w, h, d, r, seg = 3) => new RoundedBoxGeometry(w, h, d, seg, Math.min(r, w / 2, h / 2, d / 2));
+// the 0★ mark: one texture, used as small neon signs around the place (additive blending, so its black square disappears)
+export const zeroTex = (() => { const t = new THREE.TextureLoader().load('assets/zero.webp'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; })();
+export function zeroSign(size, parent, x = 0, y = 0, z = 0, opacity = 1) { const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: zeroTex, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); m.position.set(x, y, z); m.userData.noCast = true; m.userData.noBatch = true; if (parent) parent.add(m); return m; }
 // a lit cove where a wall meets the ceiling: a quarter-round along local X, origin at the corner, concave toward +Z (the room).
 // The glow is baked into vertex colours (low = by the hidden strip, high = where it meets the ceiling), so it costs nothing to light.
 export function coveGeo(len, r, low, high, seg = 20, gam = 0.7) {
