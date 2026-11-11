@@ -683,7 +683,7 @@ export function buildHall(ctx) {
   frame(0.55, 0.42, paintingTex('clown'), s, -hx + 0.03, 1.65, -8.6, Math.PI / 2).rotation.z = 0.05;
   frame(0.9, 0.68, paintingTex('asteroid'), s, hx - 0.03, 1.6, -6.2, -Math.PI / 2);
   // the posters, framed between the doors
-  [['hyodo', 0.65, -hx + 0.03, -2.6, Math.PI / 2], ['freddie', 0.68, -hx + 0.03, -4.55, Math.PI / 2], ['orchid', 0.68, hx - 0.03, -2.3, -Math.PI / 2], ['alien', 0.67, hx - 0.03, -4.9, -Math.PI / 2], ['kur', 0.8, hx - 0.03, -10.2, -Math.PI / 2]].forEach(([id, pw, x, z, ry]) => posterFrame('assets/posters/' + id + '.jpg', pw, 1.0, s, x, 1.62, z, ry));
+  [['hyodo', 0.65, -hx + 0.03, -2.6, Math.PI / 2], ['freddie', 0.68, -hx + 0.03, -4.55, Math.PI / 2], ['orchid', 0.68, hx - 0.03, -2.3, -Math.PI / 2], ['alien', 0.67, hx - 0.03, -4.9, -Math.PI / 2], ['fmk', 0.8, hx - 0.03, -10.2, -Math.PI / 2]].forEach(([id, pw, x, z, ry]) => posterFrame('assets/posters/' + id + '.jpg', pw, 1.0, s, x, 1.62, z, ry));
   // room service tray outside FMK, half eaten
   { const t = new THREE.Group(); t.position.set(hx - 0.7, 0, -7.7); t.rotation.y = 0.3; s.add(t); rbox(0.5, 0.025, 0.36, 0.01, chromeM, 0, 0.013, 0, t, 1); const cl = lathe([[0, 0], [0.15, 0], [0.13, 0.08], [0.06, 0.13], [0.02, 0.14], [0.02, 0.16], [0, 0.16]], chromeM, -0.08, 0.025, 0, t, 24); cl.rotation.z = 0.0; lathe([[0, 0], [0.035, 0], [0.04, 0.1], [0, 0.1]], phys({ color: 0xffffff, transparent: true, opacity: 0.4, roughness: 0.05 }), 0.15, 0.025, 0.08, t, 14); const sp2 = sph(0.012, basic({ color: 0x7a0a0a }), 0.12, 0.03, -0.1, t, 6); }
   // fire hose cabinet, ash urn, smoke detectors
