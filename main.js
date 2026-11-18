@@ -577,7 +577,7 @@ function loop() {
 
 /* ---------------- boot ---------------- */
 async function fontsReady() { try { await Promise.race([Promise.all(['40px "Bebas Neue"', '40px "Special Elite"', '40px "Yellowtail"', '40px "Courier Prime"', 'bold 40px "Courier Prime"'].map((f) => document.fonts.load(f))), new Promise((r) => setTimeout(r, 3500))]); } catch (e) {} }
-const prog = (p) => { const l = $('#loadpct'); if (l) l.textContent = Math.round(p * 100) + '%'; };
+const prog = (p) => { const b = $('#loadbar'); if (b) b.style.transform = `scaleX(${p})`; };
 (async function boot() {
   seed(20220);
   useScene(ext, 0.9); setCam(extView('intro')); camera.fov = cam.fov; camera.updateProjectionMatrix();
