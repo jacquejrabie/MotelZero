@@ -1,4 +1,4 @@
-// main.js — Motel Zero. Renderer, post pipeline, scenes, state machine, UI.
+// main.js: Motel Zero. Renderer, post pipeline, scenes, state machine, UI.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -577,35 +577,41 @@ function loop() {
 
 /* ---------------- boot ---------------- */
 async function fontsReady() { try { await Promise.race([Promise.all(['40px "Bebas Neue"', '40px "Special Elite"', '40px "Yellowtail"', '40px "Courier Prime"', 'bold 40px "Courier Prime"'].map((f) => document.fonts.load(f))), new Promise((r) => setTimeout(r, 3500))]); } catch (e) {} }
-const prog = (p) => { const b = $('#loadbar'); if (b) b.style.transform = `scaleX(${p})`; const l = $('#loadlbl'); if (l) l.textContent = p >= 1 ? 'ready' : `loading ${Math.round(p * 100)}%`; };
+const prog = (p) => { const l = $('#loadpct'); if (l) l.textContent = Math.round(p * 100) + '%'; };
 (async function boot() {
   seed(20220);
   useScene(ext, 0.9); setCam(extView('intro')); camera.fov = cam.fov; camera.updateProjectionMatrix();
   loop();
-  prog(0.05, 'warming up the neon'); await fontsReady(); await sleep(20);
+  prog(0.08); await fontsReady(); await sleep(20);
   logoTex = new THREE.TextureLoader().load('assets/logo.webp'); logoTex.colorSpace = THREE.SRGBColorSpace; logoTex.anisotropy = 8;
   introLogo.material.map = logoTex; introLogo.material.needsUpdate = true;
-  prog(0.15, 'surveying the asteroid'); const sp = buildSpace(ext, world); spaceUp = sp.up; bigMoon = sp.bigMoon; moonHalo = sp.moonHalo; bigMoon.material.opacity = 0; moonHalo.material.opacity = 0; introLights = sp.introLights; introLights.forEach((o) => (o.l.intensity = o.i)); await sleep(20);
-  prog(0.35, 'pouring the parking lot'); motel = buildMotel(world, { PROJECTS, ROOM_COLORS, KUR_HUES, logoTex });
+  prog(0.13); const sp = buildSpace(ext, world); spaceUp = sp.up; bigMoon = sp.bigMoon; moonHalo = sp.moonHalo; bigMoon.material.opacity = 0; moonHalo.material.opacity = 0; introLights = sp.introLights; introLights.forEach((o) => (o.l.intensity = o.i)); await sleep(20);
+  prog(0.25); motel = buildMotel(world, { PROJECTS, ROOM_COLORS, KUR_HUES, logoTex });
   hotspots.ext.push(...motel.hot); labelsDef = motel.labels; flickers = motel.flickers; doors = motel.doors; extUp.push(...motel.up); await sleep(20);
   labels = labelsDef.map((L) => { const el = document.createElement('div'); el.className = 'lbl'; el.style.setProperty('--c', L.color); el.innerHTML = `<i></i>${L.text}`; el.onclick = () => go(L.go); el.setAttribute('role', 'button'); el.tabIndex = 0; el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(L.go); } }; labelsEl.appendChild(el); return { ...L, el }; });
   const ctx = { logoTex, tvVideo, envTex, KUR_HUES, sfx: (n, v) => Snd[n]?.(v) }; try { ctx.postcardTex = makePostcard(); } catch (e) { console.warn('postcard', e); }
-  prog(0.55, 'making the beds'); interiors.lobby = buildLobby(ctx); hotspots.lobby.push(...interiors.lobby.hot); await sleep(20);
-  prog(0.7, 'making the beds'); interiors.hyodo = buildHyodo(ctx); interiors.freddie = buildFreddie(ctx); await sleep(20);
-  prog(0.85, 'making the beds'); interiors.alien = buildAlien(ctx); interiors.fmk = buildFmk(ctx); interiors.kur = buildKur(ctx); interiors.orchid = buildOrchid(ctx); await sleep(20);
-  prog(0.88, 'shuffling the cards'); interiors.casino = buildCasino({ ...ctx, onSlotWin: () => { if (state === 'casino') Snd.slot(); }, onFret: (v) => Snd.fret(v) }); czBuild(); await sleep(20);
-  prog(0.89, 'sweeping the garage'); interiors.parking = buildParking({ ...ctx, onCar: () => { if (state === 'landing') Snd.whoosh(2.6, 0.1); } }); await sleep(20);
-  prog(0.9, 'vacuuming the hallway'); interiors.hall = buildHall({ ...ctx, PROJECTS, ROOM_COLORS }); hotspots.hall.push(...interiors.hall.hot); await sleep(20);
+  prog(0.46); interiors.lobby = buildLobby(ctx); hotspots.lobby.push(...interiors.lobby.hot); await sleep(20);
+  prog(0.49); interiors.hyodo = buildHyodo(ctx); await sleep(20);
+  prog(0.51); interiors.freddie = buildFreddie(ctx); await sleep(20);
+  prog(0.53); interiors.alien = buildAlien(ctx); await sleep(20);
+  prog(0.54); interiors.fmk = buildFmk(ctx); await sleep(20);
+  prog(0.56); interiors.kur = buildKur(ctx); await sleep(20);
+  prog(0.58); interiors.orchid = buildOrchid(ctx); await sleep(20);
+  prog(0.6); interiors.casino = buildCasino({ ...ctx, onSlotWin: () => { if (state === 'casino') Snd.slot(); }, onFret: (v) => Snd.fret(v) }); czBuild(); await sleep(20);
+  prog(0.64); interiors.parking = buildParking({ ...ctx, onCar: () => { if (state === 'landing') Snd.whoosh(2.6, 0.1); } }); await sleep(20);
+  prog(0.67); interiors.hall = buildHall({ ...ctx, PROJECTS, ROOM_COLORS }); hotspots.hall.push(...interiors.hall.hot); await sleep(20);
   const fob = (id, cls) => { const p = PROJECTS[id]; return `<button class="fob ${cls}" data-go="${id}" style="--c:${p.css}${p.t ? ';--t:' + p.t : ''}"><b>${p.title}</b><span>${p.room}</span></button>`; };
   keysEl.innerHTML = `<div class="row">${['hyodo', 'orchid', 'kur'].map((id) => fob(id, 'big')).join('')}</div><div class="row">${['freddie', 'alien', 'fmk'].map((id) => fob(id, 'sm')).join('')}</div>`;
-  prog(0.95, 'turning on the vacancy sign');
+  prog(0.69); await sleep(20);
   // light and lean: a handful of local lights per scene, static geometry merged
   trimLights(ext, 6); batchStatic(world, [...extUp, ...spaceUp, (t, dt) => updateFlickers(dt, t)], 'tdt', Object.values(doors).flatMap((d) => [d.hinge, d.voidM]));
   // the intro's key and rim lights go dark after check-in; compile the exterior for that lighting now, so switching them off later costs nothing
   { const off = introLights.filter((o) => !(o.base > 0)); off.forEach((o) => (o.l.visible = false)); try { renderer.compileAsync ? renderer.compileAsync(ext, camera).catch(() => {}) : renderer.compile(ext, camera); } catch (e) {} off.forEach((o) => (o.l.visible = true)); }
+  prog(0.79); await sleep(20);
   for (const [k, I] of Object.entries(interiors)) { trimLights(I.scene, 4); batchStatic(I.scene, I.up, 'dtt', k === 'hall' ? Object.values(I.doors).flatMap((d) => d.pivots) : I.dyn || []); }
+  prog(0.89); await sleep(20);
   try { for (const I of Object.values(interiors)) renderer.compile(I.scene, camera); renderer.compile(ext, camera); } catch (e) {}
-  prog(1, 'ready'); await sleep(150);
+  prog(1); await sleep(150);
   beginIntro();
 })();
 // the opening is silent; the first tap anywhere (usually Check in) wakes the space drone

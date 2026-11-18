@@ -1,4 +1,4 @@
-// kit.js — shared helpers: random, noise, canvas textures (with generated normal maps), materials, geometry.
+// kit.js: shared helpers: random, noise, canvas textures (with generated normal maps), materials, geometry.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';

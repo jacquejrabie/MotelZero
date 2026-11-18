@@ -1,4 +1,4 @@
-// motel.js — the building, its signage, the ship garage, the casino pod, the pool dome and the cars.
+// motel.js: the building, its signage, the ship garage, the casino pod, the pool dome and the cars.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LOW, R, RI, rnd, pick, clamp, lerp, easeOut, cnv, toTex, blotch, speckle, grime, fitFont, neonText, heightToNormal, stuccoTex, concreteTex, woodTex, carpetTex, wallpaperTex, ceilingTex, tileTex, metalTex, acTex, std, phys, basic, texMat, glow, spill, neonQuad, box, rbox, cyl, sph, quad, lathe, torus, RBG, Merger, curtain, glowTex, softTex, VIDEO, VPOOL, coveGeo, zeroTex } from './kit.js';

@@ -1,4 +1,4 @@
-// rooms.js — the lobby and the five room dioramas.
+// rooms.js: the lobby and the five room dioramas.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LOW, R, RI, rnd, pick, clamp, lerp, fbm, vnoise, cnv, toTex, blotch, speckle, grime, fitFont, neonText, heightToNormal, woodTex, carpetTex, wallpaperTex, ceilingTex, tileTex, acTex, concreteTex, std, phys, basic, texMat, glow, spill, neonQuad, box, rbox, cyl, sph, quad, lathe, torus, RBG, Merger, curtain, glowTex, VIDEO, coveGeo, zeroTex, zeroSign } from './kit.js';
@@ -341,7 +341,7 @@ export function buildAlien(ctx) {
   for (let i = 0; i < 5; i++) { const cx = -0.8 + i * 0.25, cz = -d / 2 + 0.25; cyl(0.04, 0.04, R(0.1, 0.22), std({ color: 0xf2ead8 }), cx, 0.85, cz, s, 10); const f = glow(0xffc070, 0.25, 0.9); f.position.set(cx, 1.0, cz); s.add(f); up.push(() => f.scale.setScalar(0.2 + Math.random() * 0.06)); }
   rbox(1.6, 0.06, 0.3, 0.01, std({ color: 0x8a6a4a }), -0.3, 0.75, -d / 2 + 0.2, s);
   plant(s, -2.4, 0, 0.8, 1.2);
-  const [lc, lg] = cnv(256, 128); lg.fillStyle = '#1a1a1a'; lg.fillRect(0, 0, 256, 128); for (let y = 8; y < 128; y += 12) { lg.fillStyle = '#262626'; lg.fillRect(0, y, 256, 2); } lg.fillStyle = '#f0f0f0'; lg.font = '30px "Bebas Neue"'; lg.textAlign = 'center'; lg.fillText('PLEASE KEEP VOICES', 128, 46); lg.fillText('TO A WHISPER', 128, 84); lg.font = '18px "Bebas Neue"'; lg.fillText('— MGMT —', 128, 112);
+  const [lc, lg] = cnv(256, 128); lg.fillStyle = '#1a1a1a'; lg.fillRect(0, 0, 256, 128); for (let y = 8; y < 128; y += 12) { lg.fillStyle = '#262626'; lg.fillRect(0, y, 256, 2); } lg.fillStyle = '#f0f0f0'; lg.font = '30px "Bebas Neue"'; lg.textAlign = 'center'; lg.fillText('PLEASE KEEP VOICES', 128, 46); lg.fillText('TO A WHISPER', 128, 84); lg.font = '18px "Bebas Neue"'; lg.fillText('- MGMT -', 128, 112);
   frame(0.8, 0.4, toTex(lc), s, w / 2 - 0.03, 1.7, -0.6, -Math.PI / 2, 0x6a4a2a);
   const [sc, sg] = cnv(256, 120); neonText(sg, 'spa', 128, 60, '100px "Yellowtail"', '#5cff7a', 18);
   const sq = neonQuad(sc, 0.9, 0.42); sq.position.set(0.2, 2.15, -d / 2 + 0.02); s.add(sq);

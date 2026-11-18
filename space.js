@@ -1,4 +1,4 @@
-// space.js — sky, moons, stars, the asteroid and the parking lot on top of it.
+// space.js: sky, moons, stars, the asteroid and the parking lot on top of it.
 import * as THREE from 'three';
 import { LOW, R, RI, rnd, pick, clamp, lerp, fbm, vnoise, cnv, toTex, blotch, speckle, std, basic, asphaltTex, concreteTex, texMat, heightToNormal, softTex } from './kit.js';
 

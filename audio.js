@@ -1,4 +1,4 @@
-// audio.js — lounge record, neon hum, the old window AC, and a few foley bits.
+// audio.js: lounge record, neon hum, the old window AC, and a few foley bits.
 export let tvEl = null;
 export function setTv(el) { tvEl = el; }
 export let getState = () => 'intro';

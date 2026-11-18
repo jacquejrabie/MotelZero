@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Motel Zero</title>
 <script>
-  // Google Analytics (the Google tag for the Motel Zero property): visitors, where they're from, how long they stay. Only on motelzero.com, so previews and local tests don't count
+  // Google Analytics, live site only
   (function () { var ID = 'GTM-5Q3X49FZ'; if (!/^(www\.)?motelzero\.com$/.test(location.hostname)) return;
     window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments); }; gtag('js', new Date());
     var s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtm.js?id=' + ID; document.head.appendChild(s); })();
@@ -38,13 +38,10 @@
   #fade.on { opacity:1; }
 
   /* loader */
-  #loader { position:fixed; inset:0; z-index:40; background:#06050c; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; transition:opacity .7s ease; }
+  #loader { position:fixed; inset:0; z-index:40; background:#06050c; display:grid; place-items:center; transition:opacity .7s ease; }
   #loader.gone { opacity:0; pointer-events:none; }
-  #loader .mark { font:400 54px/1 'Yellowtail', cursive; color:#b9a7ff; text-shadow:0 0 18px rgba(170,120,255,.8), 0 0 42px rgba(255,70,200,.5); letter-spacing:.02em; }
-  #loader .stars { font:400 14px/1 'Courier Prime', monospace; color:#ff5fd8; letter-spacing:.5em; margin-top:-6px; text-shadow:0 0 10px rgba(255,95,216,.8); }
-  #loadtrack { width:min(260px, 60vw); height:2px; background:rgba(241,232,212,.12); overflow:hidden; margin-top:8px; }
-  #loadbar { height:100%; width:100%; background:linear-gradient(90deg,#ff5fd8,#9a7cff,#5fe8ff); transform:scaleX(0); transform-origin:left; transition:transform .5s ease; }
-  #loadlbl { font:500 10px/1 var(--sans); letter-spacing:.24em; text-transform:uppercase; opacity:.5; }
+  #loadpct { font:400 clamp(60px, 11vw, 128px)/1 'Bebas Neue', Impact, sans-serif; letter-spacing:.04em; color:#f1e8d4; opacity:0; transition:opacity .3s ease; }
+  #loader.on #loadpct { opacity:1; }
 
   /* intro */
   #intro { position:fixed; left:0; right:0; bottom:calc(9vh + var(--safe-b)); display:flex; flex-direction:column; align-items:center; gap:14px; z-index:10; transition:opacity .6s ease, transform .6s ease; }
@@ -223,7 +220,16 @@
 <div id="vig"></div><div id="grain"></div>
 <div id="labels" class="off"></div>
 
-<div id="loader"><div class="mark">Motel Zero</div><div class="stars">★ ★ ★ ★</div><div id="loadtrack"><div id="loadbar"></div></div><div id="loadlbl">loading</div></div>
+<div id="loader"><div id="loadpct">0%</div></div>
+<script>
+  (function () {
+    var l = document.getElementById('loader'), n = document.getElementById('loadpct'), on = function () { l.classList.add('on'); };
+    // show the number once its font is in, so it doesn't change shape mid-load
+    try { document.fonts.load("1em 'Bebas Neue'").then(on, on); } catch (e) { on(); } setTimeout(on, 800);
+    // the first few percent are the scripts arriving; main.js counts the rest
+    try { var k = 0; new PerformanceObserver(function (list) { list.getEntries().forEach(function (e) { if (/\.js(\?|$)/.test(e.name) && k < 7) { k++; if (parseInt(n.textContent) < k) n.textContent = k + '%'; } }); }).observe({ type: 'resource', buffered: true }); } catch (e) {}
+  })();
+</script>
 
 <div id="intro">
   <button id="checkin" disabled>Check in<small>loading…</small></button>
