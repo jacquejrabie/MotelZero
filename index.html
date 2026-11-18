@@ -40,8 +40,12 @@
   /* loader */
   #loader { position:fixed; inset:0; z-index:40; background:#06050c; display:grid; place-items:center; transition:opacity .7s ease; }
   #loader.gone { opacity:0; pointer-events:none; }
-  #loadpct { font:400 clamp(60px, 11vw, 128px)/1 'Bebas Neue', Impact, sans-serif; letter-spacing:.04em; color:#f1e8d4; opacity:0; transition:opacity .3s ease; }
-  #loader.on #loadpct { opacity:1; }
+  #loadbox { display:flex; flex-direction:column; align-items:center; opacity:0; transition:opacity .3s ease; }
+  #loader.on #loadbox { opacity:1; }
+  #loader .mark { font:400 54px/1 'Yellowtail', cursive; color:#b9a7ff; text-shadow:0 0 18px rgba(170,120,255,.8), 0 0 42px rgba(255,70,200,.5); letter-spacing:.02em; }
+  #loader .stars { font:400 14px/1 'Courier Prime', monospace; color:#ff5fd8; letter-spacing:.5em; padding-left:.5em; margin-top:12px; text-shadow:0 0 10px rgba(255,95,216,.8); }
+  #loadpct { font:400 clamp(52px, 6.4vw, 84px)/1 'Bebas Neue', Impact, sans-serif; letter-spacing:.04em; color:#f1e8d4; margin-top:30px; }
+  #loadcap { font:600 clamp(10px, 1vw, 12px)/1 var(--sans); letter-spacing:.26em; padding-left:.26em; text-transform:uppercase; color:#a17cff; white-space:nowrap; margin-top:12px; }
 
   /* intro */
   #intro { position:fixed; left:0; right:0; bottom:calc(9vh + var(--safe-b)); display:flex; flex-direction:column; align-items:center; gap:14px; z-index:10; transition:opacity .6s ease, transform .6s ease; }
@@ -220,12 +224,12 @@
 <div id="vig"></div><div id="grain"></div>
 <div id="labels" class="off"></div>
 
-<div id="loader"><div id="loadpct">0%</div></div>
+<div id="loader"><div id="loadbox"><div class="mark">Motel Zero</div><div class="stars">★ ★ ★ ★</div><div id="loadpct">0%</div><div id="loadcap">loading planetary simulation</div></div></div>
 <script>
   (function () {
     var l = document.getElementById('loader'), n = document.getElementById('loadpct'), on = function () { l.classList.add('on'); };
-    // show the number once its font is in, so it doesn't change shape mid-load
-    try { document.fonts.load("1em 'Bebas Neue'").then(on, on); } catch (e) { on(); } setTimeout(on, 800);
+    // show it once the fonts are in, so nothing changes shape mid-load
+    try { Promise.all([document.fonts.load("1em 'Bebas Neue'"), document.fonts.load("1em 'Yellowtail'")]).then(on, on); } catch (e) { on(); } setTimeout(on, 800);
     // the first few percent are the scripts arriving; main.js counts the rest
     try { var k = 0; new PerformanceObserver(function (list) { list.getEntries().forEach(function (e) { if (/\.js(\?|$)/.test(e.name) && k < 7) { k++; if (parseInt(n.textContent) < k) n.textContent = k + '%'; } }); }).observe({ type: 'resource', buffered: true }); } catch (e) {}
   })();
