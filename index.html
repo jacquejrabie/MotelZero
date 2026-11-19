@@ -42,6 +42,9 @@
   #loader.gone { opacity:0; pointer-events:none; }
   #loadbox { display:flex; flex-direction:column; align-items:center; opacity:0; transition:opacity .3s ease; }
   #loader.on #loadbox { opacity:1; }
+  #loader.tap { cursor:pointer; }
+  #loader.tap #loadtrack { visibility:hidden; }
+  #loader.tap #loadbar, #loader.go #loadbar { transition:none; }
   #loadtrack { align-self:stretch; height:2px; background:rgba(169,184,255,.14); overflow:hidden; }
   #loadbar { height:100%; width:100%; background:#a9b8ff; box-shadow:0 0 8px rgba(110,130,255,.8); transform:scaleX(0); transform-origin:left; transition:transform .5s ease; }
   #loadcap { font:600 clamp(10px, 1vw, 13px)/1 var(--sans); letter-spacing:.26em; padding-left:.26em; text-transform:uppercase; color:#b99bff; white-space:nowrap; margin-top:16px; text-shadow:0 0 8px rgba(160,110,255,.75), 0 0 20px rgba(140,80,255,.4); }
@@ -227,10 +230,12 @@
 <script>
   (function () {
     var l = document.getElementById('loader'), n = document.getElementById('loadbar'), on = function () { l.classList.add('on'); };
+    // phones start on "tap to load": the tap lets iPhones ask for motion access here, over the dark screen, instead of over the menu. Loading runs underneath the whole time
+    if (matchMedia('(pointer: coarse)').matches && !/[?&](fast|auto)\b/.test(location.search)) { l.classList.add('tap'); document.getElementById('loadcap').textContent = 'tap to load'; }
     // show it once the fonts are in, so nothing changes shape mid-load
     try { document.fonts.load("1em 'Bebas Neue'").then(on, on); } catch (e) { on(); } setTimeout(on, 800);
     // the first sliver is the scripts arriving; main.js fills the rest
-    try { var k = 0; new PerformanceObserver(function (list) { list.getEntries().forEach(function (e) { if (/\.js(\?|$)/.test(e.name) && k < 7) { k++; var c = parseFloat((n.style.transform.match(/[\d.]+/) || [0])[0]); if (c < k / 100) n.style.transform = 'scaleX(' + k / 100 + ')'; } }); }).observe({ type: 'resource', buffered: true }); } catch (e) {}
+    try { var k = 0; new PerformanceObserver(function (list) { list.getEntries().forEach(function (e) { if (/\.js(\?|$)/.test(e.name) && k < 7 && !l.classList.contains('tap')) { k++; var c = parseFloat((n.style.transform.match(/[\d.]+/) || [0])[0]); if (c < k / 100) n.style.transform = 'scaleX(' + k / 100 + ')'; } }); }).observe({ type: 'resource', buffered: true }); } catch (e) {}
   })();
 </script>
 

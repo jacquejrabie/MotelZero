@@ -577,7 +577,23 @@ function loop() {
 
 /* ---------------- boot ---------------- */
 async function fontsReady() { try { await Promise.race([Promise.all(['40px "Bebas Neue"', '40px "Special Elite"', '40px "Yellowtail"', '40px "Courier Prime"', 'bold 40px "Courier Prime"'].map((f) => document.fonts.load(f))), new Promise((r) => setTimeout(r, 3500))]); } catch (e) {} }
-const prog = (p) => { const b = $('#loadbar'); if (b) b.style.transform = `scaleX(${p})`; };
+let loadReal = 0;
+const prog = (p) => { loadReal = p; if (!$('#loader').classList.contains('tap') && !$('#loader').classList.contains('go')) $('#loadbar').style.transform = `scaleX(${p})`; };
+// phones: "tap to load". The tap asks for motion access (iPhone only allows that from a tap), then the bar shows the real progress; if loading already finished underneath, it just fills smoothly for a moment
+const loadTap = new Promise((done) => {
+  const L = $('#loader'); if (!L.classList.contains('tap')) return done();
+  L.addEventListener('click', () => {
+    gyroAsk(); L.classList.replace('tap', 'go'); $('#loadcap').textContent = 'loading planetary simulation';
+    const bar = $('#loadbar'); let shown = 0, last = performance.now(), rate = null;
+    (function step(now) {
+      const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = Math.max(last, now);
+      if (loadReal >= 1) { rate ??= Math.max(0.55, (1 - shown) / 1.4); shown = Math.min(1, shown + rate * dt); }
+      else shown += (Math.min(loadReal, 0.96) - shown) * Math.min(1, dt * 3);
+      bar.style.transform = `scaleX(${shown})`;
+      if (shown < 1) requestAnimationFrame(step); else setTimeout(done, 250);
+    })(last);
+  }, { once: true });
+});
 (async function boot() {
   seed(20220);
   useScene(ext, 0.9); setCam(extView('intro')); camera.fov = cam.fov; camera.updateProjectionMatrix();
@@ -612,6 +628,7 @@ const prog = (p) => { const b = $('#loadbar'); if (b) b.style.transform = `scale
   prog(0.89); await sleep(20);
   try { for (const I of Object.values(interiors)) renderer.compile(I.scene, camera); renderer.compile(ext, camera); } catch (e) {}
   prog(1); await sleep(150);
+  await loadTap;
   beginIntro();
 })();
 // the opening is silent; the first tap anywhere (usually Check in) wakes the space drone
