@@ -534,6 +534,7 @@ $('#checkin').onclick = checkIn;
 
 function onResize() {
   if (pr > prCap()) { pr = prCap(); renderer.setPixelRatio(pr); } renderer.setSize(innerWidth, innerHeight); camera.aspect = aspect(); camera.updateProjectionMatrix(); sizeFX();
+  interiors.lobby?.place?.(portrait());
   if (state === 'intro') setCam(extView('intro')); else if (state === 'exterior') setCam(extView('exterior')); else if (state === 'landing') setCam(parkView());
   else if (state === 'lobby') setCam(inView(interiors.lobby.views.lobby, 50, false)); else if (state === 'board') setCam(boardView()); else if (state === 'tv') setCam({ ...interiors.lobby.views.tv, fov: portrait() ? vfovFor(27, 40) : vfovFor(58, 48) }); else if (state === 'casino') setCam(casinoView()); else if (state === 'room') setCam(inView(interiors[currentRoom].views.room));
   else if (state === 'projects') setCam(hallView()); else if (state === 'pool' || SPOTS.includes(state)) setCam(extView(state));
@@ -606,7 +607,7 @@ const loadTap = new Promise((done) => {
   hotspots.ext.push(...motel.hot); labelsDef = motel.labels; flickers = motel.flickers; doors = motel.doors; extUp.push(...motel.up); await sleep(20);
   labels = labelsDef.map((L) => { const el = document.createElement('div'); el.className = 'lbl'; el.style.setProperty('--c', L.color); el.innerHTML = `<i></i>${L.text}`; el.onclick = () => go(L.go); el.setAttribute('role', 'button'); el.tabIndex = 0; el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(L.go); } }; labelsEl.appendChild(el); return { ...L, el }; });
   const ctx = { logoTex, tvVideo, envTex, KUR_HUES, sfx: (n, v) => Snd[n]?.(v) }; try { ctx.postcardTex = makePostcard(); } catch (e) { console.warn('postcard', e); }
-  prog(0.46); interiors.lobby = buildLobby(ctx); hotspots.lobby.push(...interiors.lobby.hot); await sleep(20);
+  prog(0.46); interiors.lobby = buildLobby(ctx); hotspots.lobby.push(...interiors.lobby.hot); interiors.lobby.place(portrait()); await sleep(20);
   prog(0.49); interiors.hyodo = buildHyodo(ctx); await sleep(20);
   prog(0.51); interiors.freddie = buildFreddie(ctx); await sleep(20);
   prog(0.53); interiors.alien = buildAlien(ctx); await sleep(20);

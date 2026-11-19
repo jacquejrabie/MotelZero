@@ -121,10 +121,19 @@ export function buildLobby(ctx) {
   shell(s, { w, d, h, wall: wallpaperTex(1400, 434, { bg: '#1f4744', fg: '#d9b25c', kind: 'atomic', scale: 70, wainscot: { col: '#5a3820', frac: 0.36 }, ghost: [0.08, 0.18, 0.12, 0.22] }), wallSide: wallpaperTex(1050, 434, { bg: '#1f4744', fg: '#d9b25c', kind: 'atomic', scale: 70, wainscot: { col: '#5a3820', frac: 0.36 } }), floor: carpetTex(['#8a5a1e', '#c4862e', '#4a2a12'], 'circles', [6, 4.5]), ceil: ceilingTex([5, 3.75]) });
   s.add(new THREE.HemisphereLight(0xffe0bc, 0x3a2416, 0.38));
   keyLight(s, 0.4, h - 0.1, -0.5, 0xfff0dc, 22, 1.15, 0.4, -1.5);
+  const lfx = {}, ldyn = [], lsign = {};
   // fluorescent fixture (steady, with the faintest breathing)
   const fx = rbox(1.5, 0.08, 0.3, 0.02, cream, 0.6, h - 0.05, -1.2, s); const tube = box(1.3, 0.04, 0.16, basic({ color: 0xeaffea }), 0.6, h - 0.1, -1.2, s); tube.userData.noCast = true;
   const tubeL = new THREE.PointLight(0xe8ffe6, 6, 9, 1.4); tubeL.position.set(0.6, h - 0.3, -1.0); s.add(tubeL);
-  up.push((dt, t) => { const on = (Math.sin(t * 0.23) > 0.995 && Math.random() < 0.3) ? 0.6 : 1; tubeL.intensity = 6 * on; tube.material.color.setScalar(on); });
+  // tap it: the tube clicks off. Tap again: it stutters back on (the way tubes do) and goes back to its usual breathing
+  let tubeOn = true, tubeStart = -1;
+  const tubeHit = box(1.8, 0.32, 0.6, basic({ color: 0xffffff }), 0.6, h - 0.12, -1.2, s); tubeHit.visible = false; tubeHit.userData.lobby = 'light';
+  lfx.light = () => { tubeOn = !tubeOn; tubeStart = tubeOn ? 0 : -1; ctx.sfx && ctx.sfx('flip'); };
+  up.push((dt, t) => { let on;
+    if (!tubeOn) on = 0.06;
+    else if (tubeStart >= 0) { tubeStart += Math.min(dt, 0.05); const k = tubeStart; on = k < 0.08 ? 0.5 : k < 0.16 ? 0.06 : k < 0.3 ? 0.85 : k < 0.36 ? 0.1 : k < 0.5 ? 0.7 : 1; if (k > 0.04 && k < 0.06) ctx.sfx && ctx.sfx('sputter'); if (k >= 0.5) tubeStart = -1; }
+    else on = (Math.sin(t * 0.23) > 0.995 && Math.random() < 0.3) ? 0.6 : 1;
+    tubeL.intensity = 6 * on; tube.material.color.setScalar(on); });
   // front desk
   const deskWood = texMat(woodTex(512, 256, '#6a4222', 18, [1, 1]), { roughness: 0.5 });
   const deskFront = (() => { const [c, g] = cnv(512, 128); g.drawImage(deskWood.map.image, 0, 0, 512, 128); g.fillStyle = '#c9a24a'; g.font = '46px "Bebas Neue"'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 4; g.fillText('R E G I S T R A T I O N', 256, 60); return toTex(c); })();
@@ -171,9 +180,10 @@ export function buildLobby(ctx) {
   const fan = new THREE.Group(); fan.position.set(-0.8, h - 0.35, 0.8); s.add(fan); cyl(0.02, 0.02, 0.35, brass, 0, 0.17, 0, fan, 8); lathe([[0, 0], [0.14, 0], [0.12, 0.14], [0.05, 0.16], [0, 0.16]], brass, 0, -0.08, 0, fan, 24);
   for (let i = 0; i < 4; i++) { const b = rbox(0.75, 0.015, 0.14, 0.01, texMat(woodTex(64, 32, '#5a3a1e', 2), { roughness: 0.5 }), 0, 0, 0, null, 1); const piv = new THREE.Group(); piv.rotation.y = i * Math.PI / 2; b.position.x = 0.48; b.rotation.x = 0.12; piv.add(b); fan.add(piv); }
   up.push((dt) => (fan.rotation.y += dt * 2.2));
-  // a NO SMOKING stanchion by the door and a key-drop pedestal at the end of the desk
-  const lfx = {}, ldyn = [];
+  // a NO SMOKING stanchion by the door, and a key-drop pedestal off the right end of the desk
   { const piv = new THREE.Group(); piv.position.set(-1.95 + 0.22, 0, -0.3); s.add(piv); const mid = new THREE.Group(); mid.position.set(-0.22, 0, 0); piv.add(mid); const st = new THREE.Group(); st.rotation.y = 0.5; mid.add(st); ldyn.push(piv);
+    // on a tall phone screen the desk end is out of shot, so the stand comes forward to the left edge of the frame, beside the REGISTRATION letters
+    lsign.place = (tall) => { if (tall) { piv.position.set(0.0, 0, 0.9); st.rotation.y = 0.3; } else { piv.position.set(-1.95 + 0.22, 0, -0.3); st.rotation.y = 0.5; } };
     cyl(0.2, 0.22, 0.05, chromeM, 0, 0.025, 0, st, 28); cyl(0.016, 0.016, 1.25, chromeM, 0, 0.67, 0, st, 10); rbox(0.38, 0.27, 0.03, 0.01, chromeM, 0, 1.4, 0, st, 1);
     const [nc, ng] = cnv(256, 180); ng.fillStyle = '#f2ece0'; ng.fillRect(0, 0, 256, 180); ng.fillStyle = '#1a1416'; ng.font = '44px "Bebas Neue"'; ng.textAlign = 'center'; ng.textBaseline = 'middle'; ng.fillText('NO SMOKING', 128, 148);
     ng.fillStyle = '#d8d2c4'; ng.fillRect(72, 66, 96, 16); ng.fillStyle = '#c87a3a'; ng.fillRect(148, 66, 20, 16); ng.strokeStyle = '#c0182a'; ng.lineWidth = 9; ng.beginPath(); ng.arc(128, 74, 50, 0, 7); ng.stroke(); ng.beginPath(); ng.moveTo(93, 39); ng.lineTo(163, 109); ng.stroke(); grime(ng, 256, 180, 0.25);
@@ -190,7 +200,7 @@ export function buildLobby(ctx) {
       if (wobT > 0) { wobT = Math.max(0, wobT - d); const k = 1.7 - wobT; mid.rotation.z = 0.085 * Math.exp(-k * 2.2) * Math.sin(k * 13); }
       if (mode === 'falling') { om -= 11 * Math.sin(Math.abs(th) + 0.06) * d; th += om * d; if (th <= TF) { th = TF; if (bounces++ < 2 && Math.abs(om) > 0.6) { om = -om * 0.22; if (bounces === 1) ctx.sfx && ctx.sfx('thud'); } else { mode = 'down'; om = 0; } } piv.rotation.z = th; }
       if (mode === 'rising') { rise = Math.min(1, rise + d / 0.7); const e = rise * rise * (3 - 2 * rise); th = TF * (1 - e); piv.rotation.z = th; if (rise >= 1) { th = 0; mode = 'up'; wobT = 0.9; last = -9; ctx.sfx && ctx.sfx('wobble', 0.35); } } }); }
-  { const kd = new THREE.Group(); kd.position.set(-2.25, 0, -1.5); kd.rotation.y = 0.45; s.add(kd); const kh = box(0.38, 1.18, 0.36, basic({ color: 0xffffff }), 0, 0.59, 0, kd); kh.visible = false; kh.userData.lobby = 'keys';
+  { const kd = new THREE.Group(); kd.position.set(3.3, 0, -1.9); kd.rotation.y = -0.3; s.add(kd); const kh = box(0.38, 1.18, 0.36, basic({ color: 0xffffff }), 0, 0.59, 0, kd); kh.visible = false; kh.userData.lobby = 'keys';
     // a room key on a brass fob drops into the slot
     const key = new THREE.Group(); key.visible = false; kd.add(key); ldyn.push(key); const kb = phys({ color: 0xd8b25a, roughness: 0.25, metalness: 0.95 }); torus(0.018, 0.005, kb, 0, 0.07, 0, key, 16); box(0.008, 0.07, 0.003, kb, 0, 0.025, 0, key); box(0.012, 0.006, 0.003, kb, 0.008, 0.0, 0, key); box(0.01, 0.006, 0.003, kb, 0.007, 0.014, 0, key); rbox(0.035, 0.07, 0.01, 0.008, phys({ color: 0xc8202a, roughness: 0.4, clearcoat: 0.6 }), 0, 0.12, 0, key, 2);
     let kt = -1, kc2 = false; lfx.keys = () => { if (kt >= 0) return; kt = 0; kc2 = false; key.visible = true; };
@@ -203,7 +213,7 @@ export function buildLobby(ctx) {
   const dust = []; for (let i = 0; i < 40; i++) { const p = sph(0.006, basic({ color: 0xfff0d0, transparent: true, opacity: 0.5 }), R(-3, 3), R(0.5, 2.8), R(-3, 2), s, 4); p.userData.noCast = true; dust.push(p); }
   up.push((dt, t) => dust.forEach((p, i) => { p.position.y += Math.sin(t * 0.5 + i) * 0.0015; p.position.x += Math.cos(t * 0.3 + i) * 0.001; }));
   const hot = []; s.traverse((o) => { if (o.isMesh && (o.userData.go || o.userData.ding || o.userData.lobby)) hot.push(o); });
-  return { scene: s, up, hot, plunger, fx: lfx, dyn: ldyn, views: { board, lobby: { pos: new THREE.Vector3(0.1, 1.6, 3.7), target: new THREE.Vector3(1.0, 1.3, -2.4), p: { pos: new THREE.Vector3(0.6, 1.72, 2.9), target: new THREE.Vector3(0.72, 1.22, -2.0), minH: 42, base: 64 } }, tv: { pos: new THREE.Vector3(-2.3, 1.95, -0.6), target: new THREE.Vector3(-3.85, 2.2, -2.9) } } };
+  return { scene: s, up, hot, plunger, fx: lfx, dyn: ldyn, place: lsign.place, views: { board, lobby: { pos: new THREE.Vector3(0.1, 1.6, 3.7), target: new THREE.Vector3(1.0, 1.3, -2.4), p: { pos: new THREE.Vector3(0.6, 1.72, 2.9), target: new THREE.Vector3(0.72, 1.22, -2.0), minH: 42, base: 64 } }, tv: { pos: new THREE.Vector3(-2.3, 1.95, -0.6), target: new THREE.Vector3(-3.85, 2.2, -2.9) } } };
 }
 function aboutBoard(s) {
   const W = 1024, H = 1300; const [c, g] = cnv(W, H);
