@@ -43,6 +43,7 @@
   #loadbox { display:flex; flex-direction:column; align-items:center; opacity:0; transition:opacity .3s ease; }
   #loader.on #loadbox { opacity:1; }
   #loader.tap { cursor:pointer; }
+  #loader.wait #loadbox { visibility:hidden; }
   #loader.tap #loadtrack { visibility:hidden; }
   #loader.tap #loadbar, #loader.go #loadbar { transition:none; }
   #loadtrack { align-self:stretch; height:2px; background:rgba(169,184,255,.14); overflow:hidden; }
@@ -230,8 +231,17 @@
 <script>
   (function () {
     var l = document.getElementById('loader'), n = document.getElementById('loadbar'), on = function () { l.classList.add('on'); };
-    // phones start on "tap to load": the tap lets iPhones ask for motion access here, over the dark screen, instead of over the menu. Loading runs underneath the whole time
-    if (matchMedia('(pointer: coarse)').matches && !/[?&](fast|auto)\b/.test(location.search)) { l.classList.add('tap'); document.getElementById('loadcap').textContent = 'tap to load'; }
+    // iPhones start on "tap to load": the tap lets them ask for motion access here, over the dark screen, instead of over the menu. Loading runs underneath the whole time.
+    // Phones that don't need asking (Android), or iPhones that already said yes, skip the tap
+    var D = window.DeviceOrientationEvent, cap = document.getElementById('loadcap');
+    if (matchMedia('(pointer: coarse)').matches && !/[?&](fast|auto)\b/.test(location.search) && D && typeof D.requestPermission === 'function') {
+      l.classList.add('tap', 'wait'); cap.textContent = 'tap to load';
+      var ok = function () { if (!l.classList.contains('tap')) return; l.classList.remove('tap'); cap.textContent = 'loading planetary simulation'; l.dispatchEvent(new Event('gyrook')); };
+      addEventListener('deviceorientation', function h(e) { if (e.beta != null) { removeEventListener('deviceorientation', h); ok(); } });
+      try { D.requestPermission().then(function (r) { if (r === 'granted') ok(); }, function () {}); } catch (e) {}
+      // a moment to find out before anything shows, so "tap to load" doesn't flash up and vanish
+      setTimeout(function () { l.classList.remove('wait'); }, 500);
+    }
     // show it once the fonts are in, so nothing changes shape mid-load
     try { document.fonts.load("1em 'Bebas Neue'").then(on, on); } catch (e) { on(); } setTimeout(on, 800);
     // the first sliver is the scripts arriving; main.js fills the rest

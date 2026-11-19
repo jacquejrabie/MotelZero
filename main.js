@@ -583,6 +583,8 @@ const prog = (p) => { loadReal = p; if (!$('#loader').classList.contains('tap') 
 // phones: "tap to load". The tap asks for motion access (iPhone only allows that from a tap), then the bar shows the real progress; if loading already finished underneath, it just fills smoothly for a moment
 const loadTap = new Promise((done) => {
   const L = $('#loader'); if (!L.classList.contains('tap')) return done();
+  // motion access was already allowed: no tap needed, just listen
+  L.addEventListener('gyrook', () => { gyro.asked = true; addEventListener('deviceorientation', onTilt); $('#loadbar').style.transform = `scaleX(${loadReal})`; done(); }, { once: true });
   L.addEventListener('click', () => {
     gyroAsk(); L.classList.replace('tap', 'go'); $('#loadcap').textContent = 'loading planetary simulation';
     const bar = $('#loadbar'); let shown = 0, last = performance.now(), rate = null;

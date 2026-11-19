@@ -183,7 +183,7 @@ export function buildLobby(ctx) {
   // a NO SMOKING stanchion by the door, and a key-drop pedestal off the right end of the desk
   { const piv = new THREE.Group(); piv.position.set(-1.95 + 0.22, 0, -0.3); s.add(piv); const mid = new THREE.Group(); mid.position.set(-0.22, 0, 0); piv.add(mid); const st = new THREE.Group(); st.rotation.y = 0.5; mid.add(st); ldyn.push(piv);
     // on a tall phone screen the desk end is out of shot, so the stand comes forward to the left edge of the frame, beside the REGISTRATION letters
-    lsign.place = (tall) => { if (tall) { piv.position.set(0.0, 0, 0.9); st.rotation.y = 0.3; } else { piv.position.set(-1.95 + 0.22, 0, -0.3); st.rotation.y = 0.5; } };
+    lsign.place = (tall) => { if (tall) { piv.position.set(0.05, 0, 0.9); st.rotation.y = 0.3; } else { piv.position.set(-1.95 + 0.22, 0, -0.3); st.rotation.y = 0.5; } };
     cyl(0.2, 0.22, 0.05, chromeM, 0, 0.025, 0, st, 28); cyl(0.016, 0.016, 1.25, chromeM, 0, 0.67, 0, st, 10); rbox(0.38, 0.27, 0.03, 0.01, chromeM, 0, 1.4, 0, st, 1);
     const [nc, ng] = cnv(256, 180); ng.fillStyle = '#f2ece0'; ng.fillRect(0, 0, 256, 180); ng.fillStyle = '#1a1416'; ng.font = '44px "Bebas Neue"'; ng.textAlign = 'center'; ng.textBaseline = 'middle'; ng.fillText('NO SMOKING', 128, 148);
     ng.fillStyle = '#d8d2c4'; ng.fillRect(72, 66, 96, 16); ng.fillStyle = '#c87a3a'; ng.fillRect(148, 66, 20, 16); ng.strokeStyle = '#c0182a'; ng.lineWidth = 9; ng.beginPath(); ng.arc(128, 74, 50, 0, 7); ng.stroke(); ng.beginPath(); ng.moveTo(93, 39); ng.lineTo(163, 109); ng.stroke(); grime(ng, 256, 180, 0.25);
